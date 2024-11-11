@@ -27,14 +27,23 @@
 	"}"
   ],
   "compute_lines": [],
+  "raygen_lines": [],
+  "miss_lines": [],
+  "closest_hit_lines": [],
   "vertex_included_files": [
 	"tests/python_build/fixtures/rd_glsl/_included.glsl"
   ],
   "fragment_included_files": [],
   "compute_included_files": [],
+  "raygen_included_files": [],
+  "miss_included_files": [],
+  "closest_hit_included_files": [],
   "reading": "fragment",
   "line_offset": 25,
   "vertex_offset": 1,
   "fragment_offset": 15,
-  "compute_offset": 0
+  "compute_offset": 0,
+  "raygen_offset": 0,
+  "miss_offset": 0,
+  "closest_hit_offset": 0
 }

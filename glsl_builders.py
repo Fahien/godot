@@ -11,16 +11,25 @@ class RDHeaderStruct:
         self.vertex_lines = []
         self.fragment_lines = []
         self.compute_lines = []
+        self.raygen_lines = []
+        self.miss_lines = []
+        self.closest_hit_lines = []
 
         self.vertex_included_files = []
         self.fragment_included_files = []
         self.compute_included_files = []
+        self.raygen_included_files = []
+        self.miss_included_files = []
+        self.closest_hit_included_files = []
 
         self.reading = ""
         self.line_offset = 0
         self.vertex_offset = 0
         self.fragment_offset = 0
         self.compute_offset = 0
+        self.raygen_offset = 0
+        self.miss_offset = 0
+        self.closest_hit_offset = 0
 
 
 def include_file_in_rd_header(filename: str, header_data: RDHeaderStruct, depth: int) -> RDHeaderStruct:
@@ -53,6 +62,27 @@ def include_file_in_rd_header(filename: str, header_data: RDHeaderStruct, depth:
                 header_data.compute_offset = header_data.line_offset
                 continue
 
+            if line.find("#[raygen]") != -1:
+                header_data.reading = "raygen"
+                line = fs.readline()
+                header_data.line_offset += 1
+                header_data.raygen_offset = header_data.line_offset
+                continue
+
+            if line.find("#[miss]") != -1:
+                header_data.reading = "miss"
+                line = fs.readline()
+                header_data.line_offset += 1
+                header_data.miss_offset = header_data.line_offset
+                continue
+
+            if line.find("#[closest_hit]") != -1:
+                header_data.reading = "closest_hit"
+                line = fs.readline()
+                header_data.line_offset += 1
+                header_data.closest_hit_offset = header_data.line_offset
+                continue
+
             while line.find("#include ") != -1:
                 includeline = line.replace("#include ", "").strip()[1:-1]
 
@@ -74,6 +104,20 @@ def include_file_in_rd_header(filename: str, header_data: RDHeaderStruct, depth:
                     header_data.compute_included_files += [included_file]
                     if include_file_in_rd_header(included_file, header_data, depth + 1) is None:
                         print_error(f'In file "{filename}": #include "{includeline}" could not be found!"')
+                elif included_file not in header_data.raygen_included_files and header_data.reading == "raygen":
+                    header_data.raygen_included_files += [included_file]
+                    if include_file_in_rd_header(included_file, header_data, depth + 1) is None:
+                        print_error(f'In file "{filename}": #include "{includeline}" could not be found!"')
+                elif included_file not in header_data.miss_included_files and header_data.reading == "miss":
+                    header_data.miss_included_files += [included_file]
+                    if include_file_in_rd_header(included_file, header_data, depth + 1) is None:
+                        print_error(f'In file "{filename}": #include "{includeline}" could not be found!"')
+                elif (
+                    included_file not in header_data.closest_hit_included_files and header_data.reading == "closest_hit"
+                ):
+                    header_data.closest_hit_included_files += [included_file]
+                    if include_file_in_rd_header(included_file, header_data, depth + 1) is None:
+                        print_error(f'In file "{filename}": #include "{includeline}" could not be found!"')
 
                 line = fs.readline()
 
@@ -85,6 +129,12 @@ def include_file_in_rd_header(filename: str, header_data: RDHeaderStruct, depth:
                 header_data.fragment_lines += [line]
             if header_data.reading == "compute":
                 header_data.compute_lines += [line]
+            if header_data.reading == "raygen":
+                header_data.raygen_lines += [line]
+            if header_data.reading == "miss":
+                header_data.miss_lines += [line]
+            if header_data.reading == "closest_hit":
+                header_data.closest_hit_lines += [line]
 
             line = fs.readline()
             header_data.line_offset += 1
@@ -109,7 +159,14 @@ def build_rd_header(
     out_file_ifdef = out_file_base.replace(".", "_").upper()
     out_file_class = out_file_base.replace(".glsl.gen.h", "").title().replace("_", "").replace(".", "") + "ShaderRD"
 
-    if header_data.compute_lines:
+    if header_data.raygen_lines:
+        body_parts = [
+            "static const char _raygen_code[] = {\n%s\n\t\t};" % to_raw_cstring(header_data.raygen_lines),
+            "static const char _miss_code[] = {\n%s\n\t\t};" % to_raw_cstring(header_data.miss_lines),
+            "static const char _closest_hit_code[] = {\n%s\n\t\t};" % to_raw_cstring(header_data.closest_hit_lines),
+            f'setup_raytracing(_raygen_code, _miss_code, _closest_hit_code, "{out_file_class}");',
+        ]
+    elif header_data.compute_lines:
         body_parts = [
             "static const char _compute_code[] = {\n%s\n\t\t};" % to_raw_cstring(header_data.compute_lines),
             f'setup(nullptr, nullptr, _compute_code, "{out_file_class}");',

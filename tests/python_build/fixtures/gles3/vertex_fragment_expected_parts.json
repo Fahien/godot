@@ -25,6 +25,9 @@
 	"\tfrag_color = vec4(depth);",
 	"}"
   ],
+  "raygen_lines": [],
+  "miss_lines": [],
+  "closest_hit_lines": [],
   "uniforms": [],
   "fbos": [],
   "texunits": [],
@@ -34,10 +37,14 @@
   "feedbacks": [],
   "vertex_included_files": [],
   "fragment_included_files": [],
+
   "reading": "fragment",
   "line_offset": 33,
   "vertex_offset": 10,
   "fragment_offset": 23,
+  "raygen_offset": 0,
+  "miss_offset": 0,
+  "closest_hit_offset": 0,
   "variant_defines": [
 	"#define USE_NINEPATCH"
   ],
