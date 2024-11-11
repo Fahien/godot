@@ -22,6 +22,17 @@
 				This method does nothing.
 			</description>
 		</method>
+		<method name="blas_create">
+			<return type="RID" />
+			<param index="0" name="vertex_array" type="RID" />
+			<param index="1" name="index_array" type="RID" />
+			<param index="2" name="transform_buffer" type="RID" />
+			<param index="3" name="transform_offset" type="int" default="0" />
+			<description>
+				Creates a new Bottom Level Acceleration Structure. It can be accessed with the RID that is returned.
+				Once finished with your RID, you will want to free the RID using the RenderingDevice's [method free_rid] method.
+			</description>
+		</method>
 		<method name="buffer_clear">
 			<return type="int" enum="Error" />
 			<param index="0" name="buffer" type="RID" />
@@ -680,6 +691,118 @@
 				Limits for various graphics hardware can be found in the [url=https://vulkan.gpuinfo.org/]Vulkan Hardware Database[/url].
 			</description>
 		</method>
+		<method name="raytracing_is_supported" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if raytracing is supported by this device.
+			</description>
+		</method>
+		<method name="raytracing_list_add_barrier">
+			<return type="void" />
+			<param index="0" name="raytracing_list" type="int" />
+			<description>
+				Raises a Vulkan raytracing barrier in the specified [param raytracing_list].
+			</description>
+		</method>
+		<method name="raytracing_list_begin">
+			<return type="int" />
+			<description>
+				Starts a list of raytracing drawing commands created with the [code]draw_*[/code] methods. The returned value should be passed to other [code]raytracing_list_*[/code] functions.
+				Multiple raytracing lists cannot be created at the same time; you must finish the previous raytracing list first using [method raytracing_list_end].
+				A simple raytracing operation might look like this (code is not a complete example):
+				[codeblock]
+				var rd = RenderingDevice.new()
+
+				# Create a BLAS for a mesh.
+				blas = rd.blas_create(vertex_array, index_array, transform_buffer)
+				# Create TLAS with BLASs.
+				tlas = rd.tlas_create([blas])
+
+				var raylist = rd.raytracing_list_begin()
+
+				# Build acceleration structures.
+				rd.raytracing_list_build_acceleration_structure(raylist, blas)
+				rd.raytracing_list_build_acceleration_structure(raylist, tlas)
+
+				# Bind pipeline and uniforms.
+				rd.raytracing_list_bind_raytracing_pipeline(raylist, raytracing_pipeline)
+				rd.raytracing_list_bind_uniform_set(raylist, uniform_set, 0)
+
+				# Trace rays.
+				var width = get_viewport().size.x
+				var height = get_viewport().size.y
+				rd.raytracing_list_trace_rays(raylist, width, height)
+				rd.raytracing_list_add_barrier(raylist)
+
+				rd.raytracing_list_end()
+				[/codeblock]
+			</description>
+		</method>
+		<method name="raytracing_list_bind_raytracing_pipeline">
+			<return type="void" />
+			<param index="0" name="raytracing_list" type="int" />
+			<param index="1" name="raytracing_pipeline" type="RID" />
+			<description>
+				Binds [param raytracing_pipeline] to the specified [param raytracing_list].
+			</description>
+		</method>
+		<method name="raytracing_list_bind_uniform_set">
+			<return type="void" />
+			<param index="0" name="raytracing_list" type="int" />
+			<param index="1" name="uniform_set" type="RID" />
+			<param index="2" name="set_index" type="int" />
+			<description>
+				Binds the [param uniform_set] to this [param raytracing_list]. Godot ensures that all textures in the uniform set have the correct Vulkan access masks. If Godot had to change access masks of textures, it will raise a Vulkan image memory barrier.
+			</description>
+		</method>
+		<method name="raytracing_list_build_acceleration_structure">
+			<return type="void" />
+			<param index="0" name="raytracing_list" type="int" />
+			<param index="1" name="acceleration_structure" type="RID" />
+			<description>
+				Builds the [param acceleration_structure] with the specified [param raytracing_list].
+			</description>
+		</method>
+		<method name="raytracing_list_end">
+			<return type="void" />
+			<description>
+				Finishes a list of raytracing commands created with the [code]raytracing_*[/code] methods.
+			</description>
+		</method>
+		<method name="raytracing_list_set_push_constant">
+			<return type="void" />
+			<param index="0" name="raytracing_list" type="int" />
+			<param index="1" name="buffer" type="PackedByteArray" />
+			<param index="2" name="size_bytes" type="int" />
+			<description>
+				Sets the push constant data to [param buffer] for the specified [param raytracing_list]. The shader determines how this binary data is used. The buffer's size in bytes must also be specified in [param size_bytes] (this can be obtained by calling the [method PackedByteArray.size] method on the passed [param buffer]).
+			</description>
+		</method>
+		<method name="raytracing_list_trace_rays">
+			<return type="void" />
+			<param index="0" name="raytracing_list" type="int" />
+			<param index="1" name="width" type="int" />
+			<param index="2" name="height" type="int" />
+			<description>
+				Initializes a ray tracing dispatch for the specified [param raytracing_list] assembling a group of [param width] x [param height] rays.
+			</description>
+		</method>
+		<method name="raytracing_pipeline_create">
+			<return type="RID" />
+			<param index="0" name="shader" type="RID" />
+			<param index="1" name="specialization_constants" type="RDPipelineSpecializationConstant[]" default="[]" />
+			<description>
+				Creates a new raytracing pipeline. It can be accessed with the RID that is returned.
+				Once finished with your RID, you will want to free the RID using the RenderingDevice's [method free_rid] method.
+			</description>
+		</method>
+		<method name="raytracing_pipeline_is_valid">
+			<return type="bool" />
+			<param index="0" name="raytracing_pipeline" type="RID" />
+			<description>
+				Returns [code]true[/code] if the raytracing pipeline specified by the [param raytracing_pipeline] RID is valid, [code]false[/code] otherwise.
+			</description>
+		</method>
 		<method name="render_pipeline_create">
 			<return type="RID" />
 			<param index="0" name="shader" type="RID" />
@@ -1009,6 +1132,14 @@
 				[b]Note:[/b] Updating textures is forbidden during creation of a draw or compute list.
 				[b]Note:[/b] The existing [param texture] can't be updated while a draw list that uses it as part of a framebuffer is being created. Ensure the draw list is finalized (and that the color/depth texture using it is not set to [constant FINAL_ACTION_CONTINUE]) to update this texture.
 				[b]Note:[/b] The existing [param texture] requires the [constant TEXTURE_USAGE_CAN_UPDATE_BIT] to be updatable.
+			</description>
+		</method>
+		<method name="tlas_create">
+			<return type="RID" />
+			<param index="0" name="blases" type="RID[]" />
+			<description>
+				Creates a new Top Level Acceleration Structure. It can be accessed with the RID that is returned.
+				Once finished with your RID, you will want to free the RID using the RenderingDevice's [method free_rid] method.
 			</description>
 		</method>
 		<method name="uniform_buffer_create">
@@ -2006,6 +2137,10 @@
 		</constant>
 		<constant name="STORAGE_BUFFER_USAGE_DISPATCH_INDIRECT" value="1" enum="StorageBufferUsage" is_bitfield="true">
 		</constant>
+		<constant name="STORAGE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS" value="2" enum="StorageBufferUsage" is_bitfield="true">
+		</constant>
+		<constant name="STORAGE_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY" value="4" enum="StorageBufferUsage" is_bitfield="true">
+		</constant>
 		<constant name="UNIFORM_TYPE_SAMPLER" value="0" enum="UniformType">
 			Sampler uniform.
 		</constant>
@@ -2036,7 +2171,10 @@
 		<constant name="UNIFORM_TYPE_INPUT_ATTACHMENT" value="9" enum="UniformType">
 			Input attachment uniform.
 		</constant>
-		<constant name="UNIFORM_TYPE_MAX" value="10" enum="UniformType">
+		<constant name="UNIFORM_TYPE_ACCELERATION_STRUCTURE" value="10" enum="UniformType">
+			Acceleration structure uniform.
+		</constant>
+		<constant name="UNIFORM_TYPE_MAX" value="11" enum="UniformType">
 			Represents the size of the [enum UniformType] enum.
 		</constant>
 		<constant name="RENDER_PRIMITIVE_POINTS" value="0" enum="RenderPrimitive">
@@ -2344,7 +2482,16 @@
 		<constant name="SHADER_STAGE_COMPUTE" value="4" enum="ShaderStage">
 			Compute shader stage. This can be used to run arbitrary computing tasks in a shader, performing them on the GPU instead of the CPU.
 		</constant>
-		<constant name="SHADER_STAGE_MAX" value="5" enum="ShaderStage">
+		<constant name="SHADER_STAGE_RAYGEN" value="5" enum="ShaderStage">
+			Ray generation shader stage. This can be used to generate primary rays.
+		</constant>
+		<constant name="SHADER_STAGE_MISS" value="6" enum="ShaderStage">
+			Miss shader stage. This can be used to specify what happens if a ray does not hit anything in the scene.
+		</constant>
+		<constant name="SHADER_STAGE_CLOSEST_HIT" value="7" enum="ShaderStage">
+			Closest hit shader stage. This can be used to specify what happens when a ray hits the closest geometry in the scene.
+		</constant>
+		<constant name="SHADER_STAGE_MAX" value="8" enum="ShaderStage">
 			Represents the size of the [enum ShaderStage] enum.
 		</constant>
 		<constant name="SHADER_STAGE_VERTEX_BIT" value="1" enum="ShaderStage">
@@ -2361,6 +2508,15 @@
 		</constant>
 		<constant name="SHADER_STAGE_COMPUTE_BIT" value="16" enum="ShaderStage">
 			Compute shader stage bit (see also [constant SHADER_STAGE_COMPUTE]).
+		</constant>
+		<constant name="SHADER_STAGE_RAYGEN_BIT" value="32" enum="ShaderStage">
+			Ray generation shader stage bit (see also [constant SHADER_STAGE_RAYGEN]).
+		</constant>
+		<constant name="SHADER_STAGE_MISS_BIT" value="64" enum="ShaderStage">
+			Miss shader stage bit (see also [constant SHADER_STAGE_MISS]).
+		</constant>
+		<constant name="SHADER_STAGE_CLOSEST_HIT_BIT" value="128" enum="ShaderStage">
+			Closest hit shader stage bit (see also [constant SHADER_STAGE_CLOSEST_HIT]).
 		</constant>
 		<constant name="SHADER_LANGUAGE_GLSL" value="0" enum="ShaderLanguage">
 			Khronos' GLSL shading language (used natively by OpenGL and Vulkan). This is the language used for core Godot shaders.

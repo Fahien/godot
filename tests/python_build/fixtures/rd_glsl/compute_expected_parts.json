@@ -15,14 +15,23 @@
 	"\tuint t = BLOCK_SIZE + 1;",
 	"}"
   ],
+  "raygen_lines": [],
+  "miss_lines": [],
+  "closest_hit_lines": [],
   "vertex_included_files": [],
   "fragment_included_files": [],
   "compute_included_files": [
 	"tests/python_build/fixtures/rd_glsl/_included.glsl"
   ],
+  "raygen_included_files": [],
+  "miss_included_files": [],
+  "closest_hit_included_files": [],
   "reading": "compute",
   "line_offset": 13,
   "vertex_offset": 0,
   "fragment_offset": 0,
-  "compute_offset": 1
+  "compute_offset": 1,
+  "raygen_offset": 0,
+  "miss_offset": 0,
+  "closest_hit_offset": 0
 }
