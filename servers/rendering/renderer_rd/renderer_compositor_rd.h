@@ -37,6 +37,7 @@
 #include "servers/rendering/renderer_rd/environment/fog.h"
 #include "servers/rendering/renderer_rd/forward_clustered/render_forward_clustered.h"
 #include "servers/rendering/renderer_rd/forward_mobile/render_forward_mobile.h"
+#include "servers/rendering/renderer_rd/raytracing/render_raytracing.h"
 #include "servers/rendering/renderer_rd/framebuffer_cache_rd.h"
 #include "servers/rendering/renderer_rd/renderer_canvas_render_rd.h"
 #include "servers/rendering/renderer_rd/shaders/blit.glsl.gen.h"

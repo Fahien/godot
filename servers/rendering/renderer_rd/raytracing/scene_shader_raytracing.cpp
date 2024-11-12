@@ -155,6 +155,9 @@ void SceneShaderRaytracing::ShaderData::set_code(const String &p_code) {
 	if (version.is_null()) {
 		version = SceneShaderRaytracing::singleton->shader.version_create();
 	}
+	if (raygen_version.is_null()) {
+		raygen_version = SceneShaderRaytracing::singleton->raygen_shader.version_create();
+	}
 
 	depth_draw = DepthDraw(depth_drawi);
 	depth_test = DepthTest(depth_testi);
@@ -186,6 +189,7 @@ void SceneShaderRaytracing::ShaderData::set_code(const String &p_code) {
 	print_line("\n**fragment_globals:\n" + gen_code.stage_globals[ShaderCompiler::STAGE_FRAGMENT]);
 #endif
 	SceneShaderRaytracing::singleton->shader.version_set_code(version, gen_code.code, gen_code.uniforms, gen_code.stage_globals[ShaderCompiler::STAGE_VERTEX], gen_code.stage_globals[ShaderCompiler::STAGE_FRAGMENT], gen_code.defines);
+	SceneShaderRaytracing::singleton->raygen_shader.version_set_raytracing_code(raygen_version, gen_code.code, gen_code.uniforms, gen_code.stage_globals[ShaderCompiler::STAGE_RAYGEN], gen_code.stage_globals[ShaderCompiler::STAGE_MISS], gen_code.stage_globals[ShaderCompiler::STAGE_CLOSEST_HIT], gen_code.defines);
 
 	ubo_size = gen_code.uniform_total_size;
 	ubo_offsets = gen_code.uniform_offsets;
@@ -424,6 +428,16 @@ RID SceneShaderRaytracing::ShaderData::get_shader_variant(PipelineVersion p_pipe
 	return _get_shader_variant(_get_shader_version(p_pipeline_version, p_color_pass_flags, p_ubershader));
 }
 
+RID SceneShaderRaytracing::ShaderData::get_raygen_shader_variant() const {
+	if (raygen_version.is_valid()) {
+		MutexLock lock(SceneShaderRaytracing::singleton_mutex);
+		ERR_FAIL_NULL_V(SceneShaderRaytracing::singleton, RID());
+		return SceneShaderRaytracing::singleton->raygen_shader.version_get_shader(raygen_version, 0);
+	} else {
+		return RID();
+	}
+}
+
 uint64_t SceneShaderRaytracing::ShaderData::get_vertex_input_mask(PipelineVersion p_pipeline_version, uint32_t p_color_pass_flags, bool p_ubershader) {
 	// Vertex input masks require knowledge of the shader. Since querying the shader can be expensive due to high contention and the necessary mutex, we cache the result instead.
 	ShaderVersion shader_version = _get_shader_version(p_pipeline_version, p_color_pass_flags, p_ubershader);
@@ -462,6 +476,9 @@ SceneShaderRaytracing::ShaderData::~ShaderData() {
 		MutexLock lock(SceneShaderRaytracing::singleton_mutex);
 		ERR_FAIL_NULL(SceneShaderRaytracing::singleton);
 		SceneShaderRaytracing::singleton->shader.version_free(version);
+		if (raygen_version.is_valid()) {
+			SceneShaderRaytracing::singleton->raygen_shader.version_free(raygen_version);
+		}
 	}
 }
 
@@ -578,6 +595,10 @@ void SceneShaderRaytracing::init(const String p_defines) {
 		if (RendererCompositorRD::get_singleton()->is_xr_enabled()) {
 			shader.enable_group(SHADER_GROUP_MULTIVIEW);
 		}
+
+		Vector<String> modes;
+		modes.push_back("\n");
+		raygen_shader.initialize(modes);
 	}
 
 	material_storage->shader_set_data_request_function(RendererRD::MaterialStorage::SHADER_TYPE_3D, _create_shader_funcs);
@@ -805,6 +826,8 @@ void fragment() {
 
 		MaterialData *md = static_cast<MaterialData *>(material_storage->material_get_data(default_material, RendererRD::MaterialStorage::SHADER_TYPE_3D));
 		default_shader_rd = md->shader_data->get_shader_variant(PIPELINE_VERSION_COLOR_PASS, 0, false);
+		default_raygen_shader_rd = md->shader_data->get_raygen_shader_variant();
+		raytracing_pipeline = RD::get_singleton()->raytracing_pipeline_create(default_raygen_shader_rd);
 		default_shader_sdfgi_rd = md->shader_data->get_shader_variant(PIPELINE_VERSION_DEPTH_PASS_WITH_SDF, 0, false);
 
 		default_material_shader_ptr = md->shader_data;

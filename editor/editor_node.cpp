@@ -5026,6 +5026,8 @@ String EditorNode::_get_system_info() const {
 		rendering_method = "Forward+";
 	} else if (rendering_method == "mobile") {
 		rendering_method = "Mobile";
+	} else if (rendering_method == "raytracing") {
+		rendering_method = "Raytracing";
 	} else if (rendering_method == "gl_compatibility") {
 		rendering_method = "Compatibility";
 	}
@@ -6543,6 +6545,8 @@ void EditorNode::_update_renderer_color() {
 		renderer->add_theme_color_override(SceneStringName(font_color), theme->get_color(SNAME("forward_plus_color"), EditorStringName(Editor)));
 	} else if (rendering_method == "mobile") {
 		renderer->add_theme_color_override(SceneStringName(font_color), theme->get_color(SNAME("mobile_color"), EditorStringName(Editor)));
+	} else if (rendering_method == "raytracing") {
+		renderer->add_theme_color_override(SceneStringName(font_color), theme->get_color(SNAME("raytracing_color"), EditorStringName(Editor)));
 	} else if (rendering_method == "gl_compatibility") {
 		renderer->add_theme_color_override(SceneStringName(font_color), theme->get_color(SNAME("gl_compatibility_color"), EditorStringName(Editor)));
 	}
@@ -6573,6 +6577,9 @@ void EditorNode::_add_renderer_entry(const String &p_renderer_name, bool p_mark_
 	}
 	if (p_renderer_name == "mobile") {
 		item_text = TTR("Mobile");
+	}
+	if (p_renderer_name == "raytracing") {
+		item_text = TTR("Raytracing");
 	}
 	if (p_renderer_name == "gl_compatibility") {
 		item_text = TTR("Compatibility");

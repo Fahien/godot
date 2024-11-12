@@ -825,7 +825,7 @@ class Godot(private val context: Context) {
 	private fun usesVulkan(): Boolean {
 		val renderer = GodotLib.getGlobal("rendering/renderer/rendering_method")
 		val renderingDevice = GodotLib.getGlobal("rendering/rendering_device/driver")
-		return ("forward_plus" == renderer || "mobile" == renderer) && "vulkan" == renderingDevice
+		return ("forward_plus" == renderer || "mobile" == renderer || "raytracing" == renderer) && "vulkan" == renderingDevice
 	}
 
 	/**

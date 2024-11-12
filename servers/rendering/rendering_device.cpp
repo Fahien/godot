@@ -7083,6 +7083,8 @@ Error RenderingDevice::initialize(RenderingContextDriver *p_context, DisplayServ
 			rendering_method = "Forward Mobile";
 		} else if (OS::get_singleton()->get_current_rendering_method() == "forward_plus") {
 			rendering_method = "Forward+";
+		} else {
+			rendering_method = "Raytracing";
 		}
 
 		// Output our device version.

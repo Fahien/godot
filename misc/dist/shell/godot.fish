@@ -27,6 +27,7 @@ function godot_rendering_method_args
     # Use a function instead of a fixed string to customize the argument descriptions.
     echo -e "forward_plus\tHigh-end desktop renderer"
     echo -e "mobile\tHigh-end mobile/desktop renderer"
+    echo -e "raytracing\tHigh-end desktop renderer"
     echo -e "gl_compatibility\tLow-end desktop, mobile and web renderer"
 end
 

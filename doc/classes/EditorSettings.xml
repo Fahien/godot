@@ -1085,7 +1085,7 @@
 			The TLS certificate bundle to use for HTTP requests made within the editor (e.g. from the AssetLib tab). If left empty, the [url=https://github.com/godotengine/godot/blob/master/thirdparty/certs/ca-certificates.crt]included Mozilla certificate bundle[/url] will be used.
 		</member>
 		<member name="project_manager/default_renderer" type="String" setter="" getter="">
-			The renderer type that will be checked off by default when creating a new project. Accepted strings are "forward_plus", "mobile" or "gl_compatibility".
+			The renderer type that will be checked off by default when creating a new project. Accepted strings are "forward_plus", "mobile", "raytracing" or "gl_compatibility".
 		</member>
 		<member name="project_manager/directory_naming_convention" type="int" setter="" getter="">
 			Directory naming convention for the project manager. Options are "No convention" (project name is directory name), "kebab-case" (default), "snake_case", "camelCase", "PascalCase", or "Title Case".

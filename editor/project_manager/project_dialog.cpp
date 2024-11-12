@@ -467,6 +467,12 @@ void ProjectDialog::_renderer_selected() {
 				String::utf8("\n•  ") + TTR("Uses RenderingDevice backend.") +
 				String::utf8("\n•  ") + TTR("Fast rendering of simple scenes."));
 		rd_error = !rendering_device_supported;
+	} else if (renderer_type == "raytracing") {
+		renderer_info->set_text(
+				String::utf8("•  ") + TTR("Supports raytracing-enabled hardware only.") +
+				String::utf8("\n•  ") + TTR("Most advanced 3D graphics.") +
+				String::utf8("\n•  ") + TTR("Uses RenderingDevice backend."));
+		rd_error = !rendering_device_supported;
 	} else if (renderer_type == "gl_compatibility") {
 		renderer_info->set_text(
 				String::utf8("•  ") + TTR("Supports desktop, mobile + web platforms.") +
@@ -533,6 +539,8 @@ void ProjectDialog::ok_pressed() {
 			project_features.push_back("Forward Plus");
 		} else if (renderer_type == "mobile") {
 			project_features.push_back("Mobile");
+		} else if (renderer_type == "raytracing") {
+			project_features.push_back("Raytracing");
 		} else if (renderer_type == "gl_compatibility") {
 			project_features.push_back("GL Compatibility");
 			// Also change the default rendering method for the mobile override.
@@ -1001,6 +1009,18 @@ ProjectDialog::ProjectDialog() {
 	rs_button->connect(SceneStringName(pressed), callable_mp(this, &ProjectDialog::_renderer_selected));
 	rvb->add_child(rs_button);
 	if (default_renderer_type == "mobile") {
+		rs_button->set_pressed(true);
+	}
+	rs_button = memnew(CheckBox);
+	rs_button->set_button_group(renderer_button_group);
+	rs_button->set_text(TTR("Raytracing"));
+#if defined(WEB_ENABLED)
+	rs_button->set_disabled(true);
+#endif
+	rs_button->set_meta(SNAME("rendering_method"), "raytracing");
+	rs_button->connect(SceneStringName(pressed), callable_mp(this, &ProjectDialog::_renderer_selected));
+	rvb->add_child(rs_button);
+	if (default_renderer_type == "raytracing") {
 		rs_button->set_pressed(true);
 	}
 	rs_button = memnew(CheckBox);

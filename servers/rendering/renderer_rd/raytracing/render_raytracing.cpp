@@ -48,6 +48,16 @@ using namespace RendererSceneRenderImplementation;
 
 #define FADE_ALPHA_PASS_THRESHOLD 0.999
 
+void RenderRaytracing::RenderBufferDataRaytracing::ensure_raytracing_texture() {
+	ERR_FAIL_NULL(render_buffers);
+
+	if (!render_buffers->has_texture(RB_SCOPE_RAYTRACING, RB_TEX_RAYTRACING)) {
+		RD::DataFormat format = RD::DATA_FORMAT_R32G32B32A32_SFLOAT;
+		uint32_t usage_bits = RD::TEXTURE_USAGE_SAMPLING_BIT | RD::TEXTURE_USAGE_STORAGE_BIT;
+		render_buffers->create_texture(RB_SCOPE_RAYTRACING, RB_TEX_RAYTRACING, format, usage_bits);
+	}
+}
+
 void RenderRaytracing::RenderBufferDataRaytracing::ensure_specular() {
 	ERR_FAIL_NULL(render_buffers);
 
@@ -276,6 +286,57 @@ void RenderRaytracing::update() {
 }
 
 /// RENDERING ///
+
+void RenderRaytracing::_tlas_create(RenderListType p_render_list, RenderListParameters *p_params) {
+	// Clear structures from previous frame
+	for (const RID &blas : scene_state.blass) {
+		RD::get_singleton()->free(blas);
+	}
+	scene_state.blass.clear();
+	if (scene_state.tlas != RID()) {
+		RD::get_singleton()->free(scene_state.tlas);
+	}
+
+	RendererRD::MeshStorage *mesh_storage = RendererRD::MeshStorage::get_singleton();
+
+	SceneShaderRaytracing::ShaderData::PipelineKey pipeline_key;
+
+	for (int i = 0; i < p_params->element_count; i++) {
+		const GeometryInstanceSurfaceDataCache *surf = p_params->elements[i];
+		const RenderElementInfo &element_info = p_params->element_info[i];
+
+		void *mesh_surface = surf->surface;
+		SceneShaderRaytracing::ShaderData *shader = surf->shader;
+
+		pipeline_key.primitive_type = surf->primitive;
+		pipeline_key.color_pass_flags = 0;
+		pipeline_key.version = SceneShaderRaytracing::PIPELINE_VERSION_COLOR_PASS;
+		pipeline_key.wireframe = p_params->force_wireframe;
+		pipeline_key.ubershader = 0;
+
+		RD::VertexFormatID vertex_format = -1;
+		RID vertex_array_rd;
+		RID index_array_rd;
+
+		bool pipeline_motion_vectors = pipeline_key.color_pass_flags & SceneShaderRaytracing::PIPELINE_COLOR_PASS_FLAG_MOTION_VECTORS;
+		uint64_t input_mask = shader->get_vertex_input_mask(pipeline_key.version, pipeline_key.color_pass_flags, pipeline_key.ubershader);
+		if (surf->owner->mesh_instance.is_valid()) {
+			mesh_storage->mesh_instance_surface_get_vertex_arrays_and_format(surf->owner->mesh_instance, surf->surface_index, input_mask, pipeline_motion_vectors, vertex_array_rd, vertex_format);
+		} else {
+			mesh_storage->mesh_surface_get_vertex_arrays_and_format(mesh_surface, input_mask, pipeline_motion_vectors, vertex_array_rd, vertex_format);
+		}
+
+		index_array_rd = mesh_storage->mesh_surface_get_index_array(mesh_surface, element_info.lod_index);
+
+		RID transform_buffer = scene_state.transform_buffer[p_render_list];
+		uint64_t transform_offset = i * sizeof(SceneState::TransformData);
+		scene_state.blass.push_back(RD::get_singleton()->blas_create(vertex_array_rd, index_array_rd, transform_buffer, transform_offset));
+	}
+
+	// After creating the BLASs we can create the TLAS.
+	// Create the TLAS even with no BLASs, so that uniform binding would not fail.
+	scene_state.tlas = RD::get_singleton()->tlas_create(scene_state.blass);
+}
 
 template <RenderRaytracing::PassMode p_pass_mode, uint32_t p_color_pass_flags>
 void RenderRaytracing::_render_list_template(RenderingDevice::DrawListID p_draw_list, RenderingDevice::FramebufferFormatID p_framebuffer_Format, RenderListParameters *p_params, uint32_t p_from_element, uint32_t p_to_element) {
@@ -748,11 +809,28 @@ void RenderRaytracing::_update_instance_data_buffer(RenderListType p_render_list
 		RD::get_singleton()->buffer_update(scene_state.instance_buffer[p_render_list], 0, sizeof(SceneState::InstanceData) * scene_state.instance_data[p_render_list].size(), scene_state.instance_data[p_render_list].ptr());
 	}
 }
+
+void RenderRaytracing::_update_transform_data_buffer(RenderListType p_render_list) {
+	if (scene_state.transform_data[p_render_list].size() > 0) {
+		if (scene_state.transform_buffer[p_render_list] == RID() || scene_state.transform_buffer_size[p_render_list] < scene_state.transform_data[p_render_list].size()) {
+			if (scene_state.transform_buffer[p_render_list] != RID()) {
+				RD::get_singleton()->free(scene_state.transform_buffer[p_render_list]);
+			}
+			uint32_t new_size = nearest_power_of_2_templated(MAX(uint64_t(INSTANCE_DATA_BUFFER_MIN_SIZE), scene_state.transform_data[p_render_list].size()));
+			BitField<RD::StorageBufferUsage> usage = (RD::STORAGE_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY | RD::STORAGE_BUFFER_USAGE_SHADER_DEVICE_ADDRESS);
+			scene_state.transform_buffer[p_render_list] = RD::get_singleton()->storage_buffer_create(new_size * sizeof(SceneState::TransformData), {}, usage);
+			scene_state.transform_buffer_size[p_render_list] = new_size;
+		}
+		RD::get_singleton()->buffer_update(scene_state.transform_buffer[p_render_list], 0, sizeof(SceneState::TransformData) * scene_state.transform_data[p_render_list].size(), scene_state.transform_data[p_render_list].ptr());
+	}
+}
+
 void RenderRaytracing::_fill_instance_data(RenderListType p_render_list, int *p_render_info, uint32_t p_offset, int32_t p_max_elements, bool p_update_buffer) {
 	RenderList *rl = &render_list[p_render_list];
 	uint32_t element_total = p_max_elements >= 0 ? uint32_t(p_max_elements) : rl->elements.size();
 
 	scene_state.instance_data[p_render_list].resize(p_offset + element_total);
+	scene_state.transform_data[p_render_list].resize(p_offset + element_total);
 	rl->element_info.resize(p_offset + element_total);
 
 	if (p_render_info) {
@@ -766,6 +844,7 @@ void RenderRaytracing::_fill_instance_data(RenderListType p_render_list, int *p_
 		GeometryInstanceRaytracing *inst = surface->owner;
 
 		SceneState::InstanceData &instance_data = scene_state.instance_data[p_render_list][i + p_offset];
+		SceneState::TransformData &transform_data = scene_state.transform_data[p_render_list][i + p_offset];
 
 		if (inst->prev_transform_dirty && frame > inst->prev_transform_change_frame + 1 && inst->prev_transform_change_frame) {
 			inst->prev_transform = inst->transform;
@@ -775,6 +854,7 @@ void RenderRaytracing::_fill_instance_data(RenderListType p_render_list, int *p_
 		if (inst->store_transform_cache) {
 			RendererRD::MaterialStorage::store_transform(inst->transform, instance_data.transform);
 			RendererRD::MaterialStorage::store_transform(inst->prev_transform, instance_data.prev_transform);
+			RendererRD::MaterialStorage::store_transform_transposed_3x4(inst->transform, transform_data.transform);
 
 #ifdef REAL_T_IS_DOUBLE
 			// Split the origin into two components, the float approximation and the missing precision.
@@ -786,6 +866,7 @@ void RenderRaytracing::_fill_instance_data(RenderListType p_render_list, int *p_
 		} else {
 			RendererRD::MaterialStorage::store_transform(Transform3D(), instance_data.transform);
 			RendererRD::MaterialStorage::store_transform(Transform3D(), instance_data.prev_transform);
+			RendererRD::MaterialStorage::store_transform_transposed_3x4(Transform3D(), transform_data.transform);
 		}
 
 		instance_data.flags = inst->flags_cache;
@@ -859,6 +940,7 @@ void RenderRaytracing::_fill_instance_data(RenderListType p_render_list, int *p_
 
 	if (p_update_buffer) {
 		_update_instance_data_buffer(p_render_list);
+		_update_transform_data_buffer(p_render_list);
 	}
 }
 
@@ -1628,6 +1710,26 @@ void RenderRaytracing::_process_sss(Ref<RenderSceneBuffersRD> p_render_buffers, 
 	}
 }
 
+void RenderRaytracing::_render_buffers_copy_raytracing_texture(const RenderDataRD *p_render_data) {
+	ERR_FAIL_NULL(p_render_data);
+
+	Ref<RenderSceneBuffersRD> rb = p_render_data->render_buffers;
+	ERR_FAIL_COND(rb.is_null());
+
+	RD::get_singleton()->draw_command_begin_label("Copy raytracing texture");
+
+	Ref<RenderBufferDataRaytracing> rb_data = rb->get_custom_data(RB_SCOPE_RAYTRACING);
+	ERR_FAIL_COND(rb_data.is_null());
+	rb_data->ensure_raytracing_texture();
+	RID final = rb_data->get_raytracing_texture();
+
+	RID color_texture = rb->get_internal_texture();
+	Size2i color_size = rb->get_internal_size();
+	copy_effects->copy_to_rect(final, color_texture, Rect2i(Vector2(), color_size));
+
+	RD::get_singleton()->draw_command_end_label();
+}
+
 void RenderRaytracing::_render_scene(RenderDataRD *p_render_data, const Color &p_default_bg_color) {
 	RendererRD::LightStorage *light_storage = RendererRD::LightStorage::get_singleton();
 
@@ -1821,6 +1923,14 @@ void RenderRaytracing::_render_scene(RenderDataRD *p_render_data, const Color &p
 	_fill_instance_data(RENDER_LIST_MOTION, render_info);
 	_fill_instance_data(RENDER_LIST_ALPHA, render_info);
 
+	SceneShaderRaytracing::ShaderSpecialization base_specialization = scene_shader.default_specialization;
+
+	RenderListType render_type = RENDER_LIST_OPAQUE;
+	RenderListParameters raytracing_render_list_params(render_list[render_type].elements.ptr(), render_list[render_type].element_info.ptr(), render_list[render_type].elements.size(), reverse_cull, PASS_MODE_COLOR, color_pass_flags, rb_data.is_null(), p_render_data->directional_light_soft_shadows, raytracing_uniform_set, get_debug_draw_mode() == RS::VIEWPORT_DEBUG_DRAW_WIREFRAME, Vector2(), p_render_data->scene_data->lod_distance_multiplier, p_render_data->scene_data->screen_mesh_lod_threshold, p_render_data->scene_data->view_count, 0, base_specialization);
+	_tlas_create(render_type, &raytracing_render_list_params);
+
+	_update_raytracing_uniform_set(p_render_data);
+
 	RD::get_singleton()->draw_command_end_label();
 
 	if (!is_reflection_probe) {
@@ -1997,7 +2107,7 @@ void RenderRaytracing::_render_scene(RenderDataRD *p_render_data, const Color &p
 	bool debug_sdfgi_probes = get_debug_draw_mode() == RS::VIEWPORT_DEBUG_DRAW_SDFGI_PROBES;
 	bool depth_pre_pass = bool(GLOBAL_GET("rendering/driver/depth_prepass/enable")) && depth_framebuffer.is_valid();
 
-	SceneShaderRaytracing::ShaderSpecialization base_specialization = scene_shader.default_specialization;
+	base_specialization = scene_shader.default_specialization;
 	base_specialization.use_depth_fog = p_render_data->environment.is_valid() && environment_get_fog_mode(p_render_data->environment) == RS::EnvironmentFogMode::ENV_FOG_MODE_DEPTH;
 
 	bool using_ssao = depth_pre_pass && !is_reflection_probe && p_render_data->environment.is_valid() && environment_get_ssao_enabled(p_render_data->environment);
@@ -2126,6 +2236,29 @@ void RenderRaytracing::_render_scene(RenderDataRD *p_render_data, const Color &p
 
 			RD::get_singleton()->draw_command_end_label();
 		}
+	}
+
+	if (rb_data.is_valid()) {
+		RD::get_singleton()->draw_command_begin_label("Raytracing");
+		RENDER_TIMESTAMP("Raytracing")
+
+		// Build BLASs
+		for (RID blas : scene_state.blass) {
+			RD::get_singleton()->acceleration_structure_build(blas);
+		}
+		// Build TLASs
+		RD::get_singleton()->acceleration_structure_build(scene_state.tlas);
+
+		RD::RaytracingListID raytracing_list = RD::get_singleton()->raytracing_list_begin();
+		RD::get_singleton()->raytracing_list_bind_raytracing_pipeline(raytracing_list, scene_shader.raytracing_pipeline);
+		RD::get_singleton()->raytracing_list_bind_uniform_set(raytracing_list, raytracing_uniform_set, 0);
+		Size2i target_size = rb->get_target_size();
+		RD::get_singleton()->raytracing_list_trace_rays(raytracing_list, target_size.width, target_size.height);
+		RD::get_singleton()->raytracing_list_end();
+
+		RD::get_singleton()->draw_command_end_label();
+
+		_render_buffers_copy_raytracing_texture(p_render_data);
 	}
 
 	{
@@ -3118,6 +3251,51 @@ void RenderRaytracing::_update_render_base_uniform_set() {
 
 		render_base_uniform_set = RD::get_singleton()->uniform_set_create(uniforms, scene_shader.default_shader_rd, SCENE_UNIFORM_SET);
 	}
+}
+
+void RenderRaytracing::_update_raytracing_uniform_set(const RenderDataRD *p_render_data) {
+	if (raytracing_uniform_set.is_valid() && RD::get_singleton()->uniform_set_is_valid(raytracing_uniform_set)) {
+		RD::get_singleton()->free(raytracing_uniform_set);
+	}
+
+	Ref<RenderBufferDataRaytracing> rb_data;
+	if (p_render_data && p_render_data->render_buffers.is_valid()) {
+		if (p_render_data->render_buffers->has_custom_data(RB_SCOPE_RAYTRACING)) {
+			// Our forward clustered custom data buffer will only be available when we're rendering our normal view.
+			// This will not be available when rendering reflection probes.
+			rb_data = p_render_data->render_buffers->get_custom_data(RB_SCOPE_RAYTRACING);
+		}
+	}
+
+	Vector<RD::Uniform> uniforms;
+
+	{
+		RD::Uniform u;
+		u.binding = 0;
+		u.uniform_type = RD::UNIFORM_TYPE_IMAGE;
+		rb_data->ensure_raytracing_texture();
+		u.append_id(rb_data->get_raytracing_texture());
+		uniforms.push_back(u);
+	}
+
+	{
+		RD::Uniform u;
+		u.binding = 1;
+		u.uniform_type = RD::UNIFORM_TYPE_ACCELERATION_STRUCTURE;
+		ERR_FAIL_COND(scene_state.tlas == RID());
+		u.append_id(scene_state.tlas);
+		uniforms.push_back(u);
+	}
+
+	{
+		RD::Uniform u;
+		u.binding = 2;
+		u.uniform_type = RD::UNIFORM_TYPE_UNIFORM_BUFFER;
+		u.append_id(scene_state.uniform_buffers[0]);
+		uniforms.push_back(u);
+	}
+
+	raytracing_uniform_set = RD::get_singleton()->uniform_set_create(uniforms, scene_shader.default_raygen_shader_rd, SCENE_UNIFORM_SET);
 }
 
 RID RenderRaytracing::_setup_render_pass_uniform_set(RenderListType p_render_list, const RenderDataRD *p_render_data, RID p_radiance_texture, const RendererRD::MaterialStorage::Samplers &p_samplers, bool p_use_directional_shadow_atlas, int p_index) {
@@ -4883,8 +5061,18 @@ RenderRaytracing::~RenderRaytracing() {
 			if (scene_state.instance_buffer[i] != RID()) {
 				RD::get_singleton()->free(scene_state.instance_buffer[i]);
 			}
+			if (scene_state.transform_buffer[i] != RID()) {
+				RD::get_singleton()->free(scene_state.transform_buffer[i]);
+			}
 		}
 		memdelete_arr(scene_state.lightmap_captures);
+
+		for (const RID &blas : scene_state.blass) {
+			RD::get_singleton()->free(blas);
+		}
+		if (scene_state.tlas != RID()) {
+			RD::get_singleton()->free(scene_state.tlas);
+		}
 	}
 
 	while (sdfgi_framebuffer_size_cache.begin()) {

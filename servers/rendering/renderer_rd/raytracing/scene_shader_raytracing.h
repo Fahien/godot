@@ -34,6 +34,7 @@
 #include "servers/rendering/renderer_rd/pipeline_hash_map_rd.h"
 #include "servers/rendering/renderer_rd/renderer_scene_render_rd.h"
 #include "servers/rendering/renderer_rd/shaders/raytracing/scene_raytracing.glsl.gen.h"
+#include "servers/rendering/renderer_rd/shaders/raytracing/scene_raytracing_raygen.glsl.gen.h"
 
 namespace RendererSceneRenderImplementation {
 
@@ -204,6 +205,7 @@ public:
 		PipelineHashMapRD<PipelineKey, ShaderData, void (ShaderData::*)(PipelineKey)> pipeline_hash_map;
 
 		RID version;
+		RID raygen_version;
 
 		static const uint32_t VERTEX_INPUT_MASKS_SIZE = SHADER_VERSION_DEPTH_PASS_WITH_MATERIAL + SHADER_VERSION_COLOR_PASS + SHADER_COLOR_PASS_FLAG_COUNT;
 		std::atomic<uint64_t> vertex_input_masks[VERTEX_INPUT_MASKS_SIZE] = {};
@@ -285,6 +287,7 @@ public:
 		RID _get_shader_variant(ShaderVersion p_shader_version) const;
 		void _clear_vertex_input_mask_cache();
 		RID get_shader_variant(PipelineVersion p_pipeline_version, uint32_t p_color_pass_flags, bool p_ubershader) const;
+		RID get_raygen_shader_variant() const;
 		uint64_t get_vertex_input_mask(PipelineVersion p_pipeline_version, uint32_t p_color_pass_flags, bool p_ubershader);
 		RD::PolygonCullMode get_cull_mode_from_cull_variant(CullVariant p_cull_variant);
 		bool is_valid() const;
@@ -320,6 +323,9 @@ public:
 	}
 
 	SceneRaytracingShaderRD shader;
+	SceneRaytracingRaygenShaderRD raygen_shader;
+	RID raytracing_pipeline;
+
 	ShaderCompiler compiler;
 
 	RID default_shader;
@@ -329,6 +335,7 @@ public:
 	RID debug_shadow_splits_material_shader;
 	RID debug_shadow_splits_material;
 	RID default_shader_rd;
+	RID default_raygen_shader_rd;
 	RID default_shader_sdfgi_rd;
 
 	RID default_vec4_xform_buffer;

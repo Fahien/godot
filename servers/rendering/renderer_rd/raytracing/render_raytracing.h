@@ -46,6 +46,7 @@
 
 #define RB_SCOPE_RAYTRACING SNAME("raytracing")
 
+#define RB_TEX_RAYTRACING SNAME("raytracing")
 #define RB_TEX_SPECULAR SNAME("specular")
 #define RB_TEX_SPECULAR_MSAA SNAME("specular_msaa")
 #define RB_TEX_NORMAL_ROUGHNESS SNAME("normal_roughness")
@@ -70,7 +71,8 @@ class RenderRaytracing : public RendererSceneRenderRD {
 		MAX_VOXEL_GI_INSTANCESS = 8,
 		MAX_LIGHTMAPS = 8,
 		MAX_VOXEL_GI_INSTANCESS_PER_INSTANCE = 2,
-		INSTANCE_DATA_BUFFER_MIN_SIZE = 4096
+		INSTANCE_DATA_BUFFER_MIN_SIZE = 4096,
+		TRANSFORM_DATA_BUFFER_MIN_SIZE = INSTANCE_DATA_BUFFER_MIN_SIZE
 	};
 
 	enum RenderListType {
@@ -115,6 +117,10 @@ public:
 
 		RID render_sdfgi_uniform_set;
 
+		void ensure_raytracing_texture();
+		bool has_raytracing_texture() const { return render_buffers->has_texture(RB_SCOPE_RAYTRACING, RB_TEX_RAYTRACING); }
+		RID get_raytracing_texture() const { return render_buffers->get_texture(RB_SCOPE_RAYTRACING, RB_TEX_RAYTRACING); }
+
 		void ensure_specular();
 		bool has_specular() const { return render_buffers->has_texture(RB_SCOPE_RAYTRACING, RB_TEX_SPECULAR); }
 		RID get_specular() const { return render_buffers->get_texture(RB_SCOPE_RAYTRACING, RB_TEX_SPECULAR); }
@@ -158,10 +164,12 @@ private:
 	virtual void setup_render_buffer_data(Ref<RenderSceneBuffersRD> p_render_buffers) override;
 
 	RID render_base_uniform_set;
+	RID raytracing_uniform_set;
 
 	uint64_t lightmap_texture_array_version = 0xFFFFFFFF;
 
 	void _update_render_base_uniform_set();
+	void _update_raytracing_uniform_set(const RenderDataRD *p_render_data);
 	RID _setup_sdfgi_render_pass_uniform_set(RID p_albedo_texture, RID p_emission_texture, RID p_emission_aniso_texture, RID p_geom_facing_texture, const RendererRD::MaterialStorage::Samplers &p_samplers);
 	RID _setup_render_pass_uniform_set(RenderListType p_render_list, const RenderDataRD *p_render_data, RID p_radiance_texture, const RendererRD::MaterialStorage::Samplers &p_samplers, bool p_use_directional_shadow_atlas = false, int p_index = 0);
 
@@ -318,6 +326,10 @@ private:
 			float uv_scale[4];
 		};
 
+		struct TransformData {
+			float transform[12];
+		};
+
 		UBO ubo;
 
 		LocalVector<RID> uniform_buffers;
@@ -333,6 +345,10 @@ private:
 		RID instance_buffer[RENDER_LIST_MAX];
 		uint32_t instance_buffer_size[RENDER_LIST_MAX] = { 0, 0, 0 };
 		LocalVector<InstanceData> instance_data[RENDER_LIST_MAX];
+
+		RID transform_buffer[RENDER_LIST_MAX];
+		uint32_t transform_buffer_size[RENDER_LIST_MAX] = { 0, 0, 0 };
+		LocalVector<TransformData> transform_data[RENDER_LIST_MAX];
 
 		LightmapCaptureData *lightmap_captures = nullptr;
 		uint32_t max_lightmap_captures;
@@ -364,6 +380,9 @@ private:
 
 		LocalVector<ShadowPass> shadow_passes;
 
+		LocalVector<RID> blass;
+		RID tlas;
+
 	} scene_state;
 
 	static RenderRaytracing *singleton;
@@ -382,12 +401,14 @@ private:
 		uint32_t lod_index : 8;
 	};
 
+	void _tlas_create(RenderListType p_render_list, RenderListParameters *p_params);
 	template <PassMode p_pass_mode, uint32_t p_color_pass_flags = 0>
 	_FORCE_INLINE_ void _render_list_template(RenderingDevice::DrawListID p_draw_list, RenderingDevice::FramebufferFormatID p_framebuffer_Format, RenderListParameters *p_params, uint32_t p_from_element, uint32_t p_to_element);
 	void _render_list(RenderingDevice::DrawListID p_draw_list, RenderingDevice::FramebufferFormatID p_framebuffer_Format, RenderListParameters *p_params, uint32_t p_from_element, uint32_t p_to_element);
 	void _render_list_with_draw_list(RenderListParameters *p_params, RID p_framebuffer, BitField<RD::DrawFlags> p_draw_flags = RD::DRAW_DEFAULT_ALL, const Vector<Color> &p_clear_color_values = Vector<Color>(), float p_clear_depth_value = 0.0, uint32_t p_clear_stencil_value = 0, const Rect2 &p_region = Rect2());
 
 	void _update_instance_data_buffer(RenderListType p_render_list);
+	void _update_transform_data_buffer(RenderListType p_render_list);
 	void _fill_instance_data(RenderListType p_render_list, int *p_render_info = nullptr, uint32_t p_offset = 0, int32_t p_max_elements = -1, bool p_update_buffer = true);
 	void _fill_render_list(RenderListType p_render_list, const RenderDataRD *p_render_data, PassMode p_pass_mode, bool p_using_sdfgi = false, bool p_using_opaque_gi = false, bool p_using_motion_pass = false, bool p_append = false);
 
@@ -641,6 +662,9 @@ private:
 
 	ClusterBuilderSharedDataRD cluster_builder_shared;
 	ClusterBuilderRD *current_cluster_builder = nullptr;
+
+	/* Raytracing */
+	void _render_buffers_copy_raytracing_texture(const RenderDataRD *p_render_data);
 
 	/* SDFGI */
 	void _update_sdfgi(RenderDataRD *p_render_data);

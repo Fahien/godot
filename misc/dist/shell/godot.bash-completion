@@ -124,7 +124,7 @@ _complete_godot_bash() {
   elif [[ $prev == "--rendering-method" ]]; then
     local IFS=$' \n\t'
     # shellcheck disable=SC2207
-    COMPREPLY=($(compgen -W "forward_plus mobile gl_compatibility" -- "$cur"))
+    COMPREPLY=($(compgen -W "forward_plus mobile raytracing gl_compatibility" -- "$cur"))
   elif [[ $prev == "--rendering-driver" ]]; then
     local IFS=$' \n\t'
     # shellcheck disable=SC2207

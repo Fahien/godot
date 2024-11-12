@@ -336,6 +336,8 @@ RendererCompositorRD::RendererCompositorRD() {
 		scene = memnew(RendererSceneRenderImplementation::RenderForwardMobile());
 	} else if (rendering_method == "forward_plus") {
 		scene = memnew(RendererSceneRenderImplementation::RenderForwardClustered());
+	} else if (rendering_method == "raytracing") {
+		scene = memnew(RendererSceneRenderImplementation::RenderRaytracing());
 	} else {
 		// Fall back to our high end renderer.
 		ERR_PRINT(vformat("Cannot instantiate RenderingDevice-based renderer with renderer type '%s'. Defaulting to Forward+ renderer.", rendering_method));
