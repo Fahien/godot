@@ -3638,8 +3638,23 @@ RDD::PipelineID RenderingDeviceDriverMetal::compute_pipeline_create(ShaderID p_s
 // ----- ACCELERATION STRUCTURE -----
 
 RDD::AccelerationStructureID RenderingDeviceDriverMetal::blas_create(BufferID p_vertex_buffer, uint64_t p_vertex_offset, VertexFormatID p_vertex_format, uint32_t p_vertex_count, BufferID p_index_buffer, IndexBufferFormat p_index_format, uint64_t p_index_offset_bytes, uint32_t p_index_count, RDD::BufferID p_transform_buffer, uint64_t p_transform_offset) {
-	// TODO
-	ERR_FAIL_V_MSG(AccelerationStructureID(), "Unimplemented!");
+	MTLAccelerationStructureTriangleGeometryDescriptor *geometry_descriptor = [MTLAccelerationStructureTriangleGeometryDescriptor new];
+	geometry_descriptor.vertexBuffer = rid::get(p_vertex_buffer);
+	geometry_descriptor.indexBuffer = rid::get(p_index_buffer);
+
+	MTLPrimitiveAccelerationStructureDescriptor *acceleration_structure_desc = [MTLPrimitiveAccelerationStructureDescriptor new];
+	acceleration_structure_desc.geometryDescriptors = @[ geometry_descriptor ];
+
+	MTLAccelerationStructureSizes sizes = [device accelerationStructureSizesWithDescriptor:acceleration_structure_desc];
+	id<MTLAccelerationStructure> acceleration_structure = [device newAccelerationStructureWithSize:sizes.accelerationStructureSize];
+
+	id<MTLBuffer> scratch_buffer = [device newBufferWithLength:sizes.buildScratchBufferSize options:MTLResourceStorageModePrivate];
+
+	AccelerationStructure *acceleration_structure_info = memnew(AccelerationStructure);
+	acceleration_structure_info->acceleration_structure = acceleration_structure;
+	acceleration_structure_info->desc = acceleration_structure_desc;
+	acceleration_structure_info->scratch_buffer = scratch_buffer;
+	return AccelerationStructureID(acceleration_structure_info);
 }
 
 RDD::AccelerationStructureID RenderingDeviceDriverMetal::tlas_create(const LocalVector<RDD::AccelerationStructureID> &p_blases) {
@@ -3648,8 +3663,8 @@ RDD::AccelerationStructureID RenderingDeviceDriverMetal::tlas_create(const Local
 }
 
 void RenderingDeviceDriverMetal::acceleration_structure_free(RDD::AccelerationStructureID p_acceleration_structure) {
-	// TODO
-	ERR_FAIL_MSG("Unimplemented!");
+	AccelerationStructure *acceleration_structure = (AccelerationStructure *)(p_acceleration_structure.id);
+	memdelete(acceleration_structure);
 }
 
 // ----- PIPELINE -----
@@ -3667,8 +3682,15 @@ void RenderingDeviceDriverMetal::raytracing_pipeline_free(RDD::RaytracingPipelin
 // ----- COMMANDS -----
 
 void RenderingDeviceDriverMetal::command_build_acceleration_structure(CommandBufferID p_cmd_buffer, AccelerationStructureID p_acceleration_structure) {
-	// TODO
-	ERR_FAIL_MSG("Unimplemented!");
+	MDCommandBuffer *cmd = (MDCommandBuffer *)(p_cmd_buffer.id);
+	AccelerationStructure *acceleration_structure = (AccelerationStructure *)(p_acceleration_structure.id);
+
+	id<MTLAccelerationStructureCommandEncoder> command_encoder = cmd->acceleration_structure_command_encoder();
+	[command_encoder
+		buildAccelerationStructure: acceleration_structure->acceleration_structure
+		descriptor: acceleration_structure->desc
+		scratchBuffer: acceleration_structure->scratch_buffer
+		scratchBufferOffset: 0];
 }
 
 void RenderingDeviceDriverMetal::command_bind_raytracing_pipeline(CommandBufferID p_cmd_buffer, RaytracingPipelineID p_pipeline) {

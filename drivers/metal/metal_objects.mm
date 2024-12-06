@@ -71,6 +71,8 @@ void MDCommandBuffer::end() {
 			return _end_compute_dispatch();
 		case MDCommandBufferStateType::Blit:
 			return _end_blit();
+		case MDCommandBufferStateType::AccelerationStructure:
+			return _end_acceleration_structure();
 	}
 }
 
@@ -89,6 +91,8 @@ void MDCommandBuffer::bind_pipeline(RDD::PipelineID p_pipeline) {
 		_end_compute_dispatch();
 	} else if (type == MDCommandBufferStateType::Blit) {
 		_end_blit();
+	} else if (type == MDCommandBufferStateType::AccelerationStructure) {
+		_end_acceleration_structure();
 	}
 
 	if (p->type == MDPipelineType::Render) {
@@ -171,6 +175,9 @@ id<MTLBlitCommandEncoder> MDCommandBuffer::blit_command_encoder() {
 		case MDCommandBufferStateType::Compute:
 			_end_compute_dispatch();
 			break;
+		case MDCommandBufferStateType::AccelerationStructure:
+			_end_acceleration_structure();
+			break;
 		case MDCommandBufferStateType::Blit:
 			return blit.encoder;
 	}
@@ -178,6 +185,28 @@ id<MTLBlitCommandEncoder> MDCommandBuffer::blit_command_encoder() {
 	type = MDCommandBufferStateType::Blit;
 	blit.encoder = commandBuffer.blitCommandEncoder;
 	return blit.encoder;
+}
+
+id<MTLAccelerationStructureCommandEncoder> MDCommandBuffer::acceleration_structure_command_encoder() {
+	switch (type) {
+		case MDCommandBufferStateType::None:
+			break;
+		case MDCommandBufferStateType::Render:
+			render_end_pass();
+			break;
+		case MDCommandBufferStateType::Compute:
+			_end_compute_dispatch();
+			break;
+		case MDCommandBufferStateType::Blit:
+			_end_blit();
+			break;
+		case MDCommandBufferStateType::AccelerationStructure:
+			return acceleration_structure.encoder;
+	}
+
+	type = MDCommandBufferStateType::AccelerationStructure;
+	acceleration_structure.encoder = commandBuffer.accelerationStructureCommandEncoder;
+	return acceleration_structure.encoder;
 }
 
 void MDCommandBuffer::encodeRenderCommandEncoderWithDescriptor(MTLRenderPassDescriptor *p_desc, NSString *p_label) {
@@ -192,6 +221,9 @@ void MDCommandBuffer::encodeRenderCommandEncoderWithDescriptor(MTLRenderPassDesc
 			break;
 		case MDCommandBufferStateType::Blit:
 			_end_blit();
+			break;
+		case MDCommandBufferStateType::AccelerationStructure:
+			_end_acceleration_structure();
 			break;
 	}
 
@@ -995,6 +1027,14 @@ void MDCommandBuffer::_end_blit() {
 
 	[blit.encoder endEncoding];
 	blit.reset();
+	type = MDCommandBufferStateType::None;
+}
+
+void MDCommandBuffer::_end_acceleration_structure() {
+	DEV_ASSERT(type == MDCommandBufferStateType::AccelerationStructure);
+
+	[acceleration_structure.encoder endEncoding];
+	acceleration_structure.reset();
 	type = MDCommandBufferStateType::None;
 }
 

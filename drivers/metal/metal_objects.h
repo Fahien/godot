@@ -120,6 +120,7 @@ enum class MDCommandBufferStateType {
 	Render,
 	Compute,
 	Blit,
+	AccelerationStructure,
 };
 
 enum class MDPipelineType {
@@ -317,6 +318,7 @@ private:
 
 	void _end_compute_dispatch();
 	void _end_blit();
+	void _end_acceleration_structure();
 
 #pragma mark - Render
 
@@ -486,6 +488,14 @@ public:
 		}
 	} blit;
 
+	// State specific to an acceleration structure build.
+	struct {
+		id<MTLAccelerationStructureCommandEncoder> encoder = nil;
+		_FORCE_INLINE_ void reset() {
+			encoder = nil;
+		}
+	} acceleration_structure;
+
 	_FORCE_INLINE_ id<MTLCommandBuffer> get_command_buffer() const {
 		return commandBuffer;
 	}
@@ -495,6 +505,7 @@ public:
 	void end();
 
 	id<MTLBlitCommandEncoder> blit_command_encoder();
+	id<MTLAccelerationStructureCommandEncoder> acceleration_structure_command_encoder();
 	void encodeRenderCommandEncoderWithDescriptor(MTLRenderPassDescriptor *p_desc, NSString *p_label);
 
 	void bind_pipeline(RDD::PipelineID p_pipeline);

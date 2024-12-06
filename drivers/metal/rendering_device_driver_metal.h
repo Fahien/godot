@@ -384,6 +384,12 @@ public:
 
 	// ----- ACCELERATION STRUCTURE -----
 
+	struct AccelerationStructure {
+		id<MTLAccelerationStructure> acceleration_structure;
+		MTLPrimitiveAccelerationStructureDescriptor *desc;
+		id<MTLBuffer> scratch_buffer;
+	};
+
 	virtual AccelerationStructureID blas_create(BufferID p_vertex_buffer, uint64_t p_vertex_offset, VertexFormatID p_vertex_format, uint32_t p_vertex_count, BufferID p_index_buffer, IndexBufferFormat p_index_format, uint64_t p_index_offset_bytes, uint32_t p_index_count, BufferID p_transform_buffer, uint64_t p_transform_offset) override final;
 	virtual AccelerationStructureID tlas_create(const LocalVector<AccelerationStructureID> &p_blases) override final;
 	virtual void acceleration_structure_free(AccelerationStructureID p_acceleration_structure) override final;
