@@ -3295,6 +3295,14 @@ void RenderRaytracing::_update_raytracing_uniform_set(const RenderDataRD *p_rend
 		uniforms.push_back(u);
 	}
 
+	{
+		RD::Uniform u;
+		u.binding = 3;
+		u.uniform_type = RD::UNIFORM_TYPE_STORAGE_BUFFER;
+		u.append_id(RendererRD::LightStorage::get_singleton()->get_omni_light_buffer());
+		uniforms.push_back(u);
+	}
+
 	raytracing_uniform_set = RD::get_singleton()->uniform_set_create(uniforms, scene_shader.default_raygen_shader_rd, SCENE_UNIFORM_SET);
 }
 
