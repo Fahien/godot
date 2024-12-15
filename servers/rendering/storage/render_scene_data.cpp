@@ -39,6 +39,9 @@ void RenderSceneData::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_view_projection", "view"), &RenderSceneData::get_view_projection);
 
 	ClassDB::bind_method(D_METHOD("get_uniform_buffer"), &RenderSceneData::get_uniform_buffer);
+	ClassDB::bind_method(D_METHOD("get_transforms", "render_list_index"), &RenderSceneData::get_transforms, DEFVAL(0));
+	ClassDB::bind_method(D_METHOD("get_vertex_arrays", "render_list_index"), &RenderSceneData::get_vertex_arrays, DEFVAL(0));
+	ClassDB::bind_method(D_METHOD("get_index_arrays", "render_list_index"), &RenderSceneData::get_index_arrays, DEFVAL(0));
 }
 
 void RenderSceneDataExtension::_bind_methods() {
@@ -49,6 +52,9 @@ void RenderSceneDataExtension::_bind_methods() {
 	GDVIRTUAL_BIND(_get_view_projection, "view");
 
 	GDVIRTUAL_BIND(_get_uniform_buffer);
+	GDVIRTUAL_BIND(_get_transforms, "render_list_index");
+	GDVIRTUAL_BIND(_get_vertex_arrays, "render_list_index");
+	GDVIRTUAL_BIND(_get_index_arrays, "render_list_index");
 }
 
 Transform3D RenderSceneDataExtension::get_cam_transform() const {
@@ -84,5 +90,23 @@ Projection RenderSceneDataExtension::get_view_projection(uint32_t p_view) const 
 RID RenderSceneDataExtension::get_uniform_buffer() const {
 	RID ret;
 	GDVIRTUAL_CALL(_get_uniform_buffer, ret);
+	return ret;
+}
+
+TypedArray<Transform3D> RenderSceneDataExtension::get_transforms(uint32_t p_render_list_index) const {
+	TypedArray<Transform3D> ret;
+	GDVIRTUAL_CALL(_get_transforms, p_render_list_index, ret);
+	return ret;
+}
+
+TypedArray<RID> RenderSceneDataExtension::get_vertex_arrays(uint32_t p_render_list_index) const {
+	TypedArray<RID> ret;
+	GDVIRTUAL_CALL(_get_vertex_arrays, p_render_list_index, ret);
+	return ret;
+}
+
+TypedArray<RID> RenderSceneDataExtension::get_index_arrays(uint32_t p_render_list_index) const {
+	TypedArray<RID> ret;
+	GDVIRTUAL_CALL(_get_index_arrays, p_render_list_index, ret);
 	return ret;
 }

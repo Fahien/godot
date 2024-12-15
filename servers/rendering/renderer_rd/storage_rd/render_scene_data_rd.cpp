@@ -298,3 +298,18 @@ void RenderSceneDataRD::update_ubo(RID p_uniform_buffer, RS::ViewportDebugDraw p
 RID RenderSceneDataRD::get_uniform_buffer() const {
 	return uniform_buffer;
 }
+
+TypedArray<RID> RenderSceneDataRD::get_vertex_arrays(uint32_t p_render_list_index) const {
+	RendererSceneRenderRD *render_scene_render = RendererSceneRenderRD::get_singleton();
+	return render_scene_render->get_vertex_arrays(p_render_list_index);
+}
+
+TypedArray<RID> RenderSceneDataRD::get_index_arrays(uint32_t p_render_list_index) const {
+	RendererSceneRenderRD *render_scene_render = RendererSceneRenderRD::get_singleton();
+	return render_scene_render->get_index_arrays(p_render_list_index);
+}
+
+TypedArray<Transform3D> RenderSceneDataRD::get_transforms(uint32_t p_render_list_index) const {
+	RendererSceneRenderRD *render_scene_render = RendererSceneRenderRD::get_singleton();
+	return render_scene_render->get_transforms(p_render_list_index);
+}

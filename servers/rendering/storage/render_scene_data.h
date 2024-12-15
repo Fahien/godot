@@ -50,6 +50,9 @@ public:
 	virtual Projection get_view_projection(uint32_t p_view) const = 0;
 
 	virtual RID get_uniform_buffer() const = 0;
+	virtual TypedArray<Transform3D> get_transforms(uint32_t p_render_list_index) const = 0;
+	virtual TypedArray<RID> get_vertex_arrays(uint32_t p_render_list_index) const = 0;
+	virtual TypedArray<RID> get_index_arrays(uint32_t p_render_list_index) const = 0;
 };
 
 class RenderSceneDataExtension : public RenderSceneData {
@@ -67,6 +70,9 @@ public:
 	virtual Projection get_view_projection(uint32_t p_view) const override;
 
 	virtual RID get_uniform_buffer() const override;
+	virtual TypedArray<Transform3D> get_transforms(uint32_t p_render_list_index) const override;
+	virtual TypedArray<RID> get_vertex_arrays(uint32_t p_render_list_index) const override;
+	virtual TypedArray<RID> get_index_arrays(uint32_t p_render_list_index) const override;
 
 	GDVIRTUAL0RC(Transform3D, _get_cam_transform)
 	GDVIRTUAL0RC(Projection, _get_cam_projection)
@@ -76,4 +82,7 @@ public:
 	GDVIRTUAL1RC(Projection, _get_view_projection, uint32_t)
 
 	GDVIRTUAL0RC(RID, _get_uniform_buffer)
+	GDVIRTUAL1RC(TypedArray<Transform3D>, _get_transforms, uint32_t)
+	GDVIRTUAL1RC(TypedArray<RID>, _get_vertex_arrays, uint32_t)
+	GDVIRTUAL1RC(TypedArray<RID>, _get_index_arrays, uint32_t)
 };

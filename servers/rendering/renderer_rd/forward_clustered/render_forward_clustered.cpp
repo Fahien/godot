@@ -4972,6 +4972,69 @@ void RenderForwardClustered::GeometryInstanceForwardClustered::set_softshadow_pr
 	_mark_dirty();
 }
 
+TypedArray<Transform3D> RenderForwardClustered::get_transforms(uint32_t p_render_list_index) const {
+	TypedArray<Transform3D> transforms;
+
+	for (uint32_t i = 0; i < render_list[p_render_list_index].elements.size(); i++) {
+		auto *surf = render_list[p_render_list_index].elements[i];
+		auto *inst = surf->owner;
+		if (inst->store_transform_cache) {
+			transforms.push_back(inst->transform);
+		} else {
+			transforms.push_back(Transform3D());
+		}
+	}
+
+	return transforms;
+}
+
+TypedArray<RID> RenderForwardClustered::get_vertex_arrays(uint32_t p_render_list_index) const {
+	RendererRD::MeshStorage *mesh_storage = RendererRD::MeshStorage::get_singleton();
+
+	TypedArray<RID> vertex_arrays;
+
+	for (uint32_t i = 0; i < render_list[p_render_list_index].elements.size(); i++) {
+		auto *surf = render_list[p_render_list_index].elements[i];
+
+		RID vertex_array = RID();
+		RD::VertexFormatID vertex_format = 0;
+
+		SceneShaderForwardClustered::ShaderData::PipelineKey pipeline_key;
+		pipeline_key.version = SceneShaderForwardClustered::PIPELINE_VERSION_COLOR_PASS;
+		pipeline_key.color_pass_flags = 0;
+		pipeline_key.ubershader = 0;
+
+		SceneShaderForwardClustered::ShaderData *shader = surf->shader;
+		bool pipeline_motion_vectors = pipeline_key.color_pass_flags & SceneShaderForwardClustered::PIPELINE_COLOR_PASS_FLAG_MOTION_VECTORS;
+		uint64_t input_mask = shader->get_vertex_input_mask(pipeline_key.version, pipeline_key.color_pass_flags, pipeline_key.ubershader);
+
+		if (surf->owner->mesh_instance.is_valid()) {
+			mesh_storage->mesh_instance_surface_get_vertex_arrays_and_format(surf->owner->mesh_instance, surf->surface_index, input_mask, pipeline_motion_vectors, false, vertex_array, vertex_format);
+		} else {
+			auto mesh_surface = surf->surface;
+			mesh_storage->mesh_surface_get_vertex_arrays_and_format(mesh_surface, input_mask, pipeline_motion_vectors, false, vertex_array, vertex_format);
+		}
+
+		vertex_arrays.push_back(vertex_array);
+	}
+
+	return vertex_arrays;
+}
+
+TypedArray<RID> RenderForwardClustered::get_index_arrays(uint32_t p_render_list_index) const {
+	RendererRD::MeshStorage *mesh_storage = RendererRD::MeshStorage::get_singleton();
+	TypedArray<RID> index_arrays;
+
+	for (uint32_t i = 0; i < render_list[p_render_list_index].elements.size(); i++) {
+		auto *surf = render_list[p_render_list_index].elements[i];
+		int lod = surf->sort.lod_index;
+		RID index_array = mesh_storage->mesh_surface_get_index_array(surf->surface, lod);
+		index_arrays.push_back(index_array);
+	}
+
+	return index_arrays;
+}
+
 void RenderForwardClustered::_update_shader_quality_settings() {
 	SceneShaderForwardClustered::ShaderSpecialization specialization = {};
 	specialization.decal_use_mipmaps = decals_get_filter() == RS::DECAL_FILTER_NEAREST_MIPMAPS ||

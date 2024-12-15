@@ -100,6 +100,10 @@ public:
 
 	static uint32_t get_uniform_buffer_size_bytes() { return sizeof(UBODATA); }
 
+	virtual TypedArray<Transform3D> get_transforms(uint32_t p_render_list_index) const override;
+	virtual TypedArray<RID> get_vertex_arrays(uint32_t p_render_list_index) const override;
+	virtual TypedArray<RID> get_index_arrays(uint32_t p_render_list_index) const override;
+
 private:
 	RID uniform_buffer; // loaded into this uniform buffer (supplied externally)
 

@@ -834,6 +834,10 @@ public:
 	virtual void mesh_generate_pipelines(RID p_mesh, bool p_background_compilation) override;
 	virtual uint32_t get_pipeline_compilations(RS::PipelineSource p_source) override;
 
+	TypedArray<Transform3D> get_transforms(uint32_t p_render_list_index) const override;
+	virtual TypedArray<RID> get_vertex_arrays(uint32_t p_render_list_index) const override;
+	virtual TypedArray<RID> get_index_arrays(uint32_t p_render_list_index) const override;
+
 	/* SHADER LIBRARY */
 
 	virtual void enable_features(BitField<FeatureBits> p_feature_bits) override;
