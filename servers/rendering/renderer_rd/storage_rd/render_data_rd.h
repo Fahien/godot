@@ -45,6 +45,8 @@ public:
 
 	virtual RID get_environment() const override;
 	virtual RID get_camera_attributes() const override;
+	virtual int get_instance_count() const override;
+	virtual TypedArray<RID> get_vertex_arrays(int p_instance) const override;
 
 	// Members are publicly accessible within the render engine.
 	Ref<RenderSceneBuffersRD> render_buffers;

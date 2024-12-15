@@ -64,6 +64,7 @@ public:
 
 	virtual Transform3D get_transform() = 0;
 	virtual AABB get_aabb() = 0;
+	virtual Vector<RID> get_vertex_arrays() = 0;
 
 	virtual void pair_light_instances(const RID *p_light_instances, uint32_t p_light_instance_count) = 0;
 	virtual void pair_reflection_probe_instances(const RID *p_reflection_probe_instances, uint32_t p_reflection_probe_instance_count) = 0;
@@ -148,6 +149,7 @@ public:
 
 	virtual Transform3D get_transform() override;
 	virtual AABB get_aabb() override;
+	virtual Vector<RID> get_vertex_arrays() override;
 };
 
 #endif // RENDERER_GEOMETRY_INSTANCE_H

@@ -45,3 +45,27 @@ RID RenderDataRD::get_environment() const {
 RID RenderDataRD::get_camera_attributes() const {
 	return camera_attributes;
 }
+
+int RenderDataRD::get_instance_count() const {
+	if (instances == nullptr) {
+		return 0;
+	}
+
+	return static_cast<int>(instances->size());
+}
+
+TypedArray<RID> RenderDataRD::get_vertex_arrays(int p_instance) const {
+	TypedArray<RID> ret;
+
+	if (instances == nullptr) {
+		return ret;
+	}
+
+	RenderGeometryInstance *inst = (*instances)[p_instance];
+
+	Vector<RID> vertex_arrays = inst->get_vertex_arrays();
+	for (int i = 0; i < vertex_arrays.size(); i++) {
+		ret.push_back(vertex_arrays[i]);
+	}
+	return ret;
+}
