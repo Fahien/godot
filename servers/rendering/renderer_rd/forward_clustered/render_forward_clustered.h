@@ -516,6 +516,7 @@ private:
 		virtual void set_softshadow_projector_pairing(bool p_softshadow, bool p_projector) override;
 
 		virtual Vector<RID> get_vertex_arrays() override;
+		virtual Vector<RID> get_index_arrays() override;
 	};
 
 	static void _geometry_instance_dependency_changed(Dependency::DependencyChangedNotification p_notification, DependencyTracker *p_tracker);

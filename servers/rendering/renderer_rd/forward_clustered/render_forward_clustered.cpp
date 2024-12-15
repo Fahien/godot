@@ -4850,6 +4850,21 @@ Vector<RID> RenderForwardClustered::GeometryInstanceForwardClustered::get_vertex
 	return vertex_arrays;
 }
 
+Vector<RID> RenderForwardClustered::GeometryInstanceForwardClustered::get_index_arrays() {
+	RendererRD::MeshStorage *mesh_storage = RendererRD::MeshStorage::get_singleton();
+	Vector<RID> index_arrays;
+	GeometryInstanceSurfaceDataCache *surf = surface_caches;
+
+	while (surf) {
+		int lod = surf->sort.lod_index;
+		RID index_array = mesh_storage->mesh_surface_get_index_array(surf->surface, lod);
+		index_arrays.push_back(index_array);
+		surf = surf->next;
+	}
+
+	return index_arrays;
+}
+
 void RenderForwardClustered::_update_shader_quality_settings() {
 	SceneShaderForwardClustered::ShaderSpecialization specialization = {};
 	specialization.decal_use_mipmaps = decals_get_filter() == RS::DECAL_FILTER_NEAREST_MIPMAPS ||
