@@ -51,6 +51,8 @@ public:
 	virtual Projection get_view_projection(uint32_t p_view) const = 0;
 
 	virtual RID get_uniform_buffer() const = 0;
+	virtual int get_transform_count() const = 0;
+	virtual RID get_transform_buffer() const = 0;
 };
 
 class RenderSceneDataExtension : public RenderSceneData {
@@ -68,6 +70,8 @@ public:
 	virtual Projection get_view_projection(uint32_t p_view) const override;
 
 	virtual RID get_uniform_buffer() const override;
+	virtual int get_transform_count() const override;
+	virtual RID get_transform_buffer() const override;
 
 	GDVIRTUAL0RC(Transform3D, _get_cam_transform)
 	GDVIRTUAL0RC(Projection, _get_cam_projection)
@@ -77,6 +81,8 @@ public:
 	GDVIRTUAL1RC(Projection, _get_view_projection, uint32_t)
 
 	GDVIRTUAL0RC(RID, _get_uniform_buffer)
+	GDVIRTUAL0RC(int, _get_transform_count)
+	GDVIRTUAL0RC(RID, _get_transform_buffer)
 };
 
 #endif // RENDER_SCENE_DATA_H

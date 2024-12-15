@@ -297,3 +297,13 @@ void RenderSceneDataRD::update_ubo(RID p_uniform_buffer, RS::ViewportDebugDraw p
 RID RenderSceneDataRD::get_uniform_buffer() const {
 	return uniform_buffer;
 }
+
+int RenderSceneDataRD::get_transform_count() const {
+	RendererSceneRenderRD *render_scene_render = RendererSceneRenderRD::get_singleton();
+	return render_scene_render->get_transform_count();
+}
+
+RID RenderSceneDataRD::get_transform_buffer() const {
+	RendererSceneRenderRD *render_scene_render = RendererSceneRenderRD::get_singleton();
+	return render_scene_render->get_transform_buffer();
+}

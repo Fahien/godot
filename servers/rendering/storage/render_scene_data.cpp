@@ -39,6 +39,8 @@ void RenderSceneData::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_view_projection", "view"), &RenderSceneData::get_view_projection);
 
 	ClassDB::bind_method(D_METHOD("get_uniform_buffer"), &RenderSceneData::get_uniform_buffer);
+	ClassDB::bind_method(D_METHOD("get_transform_count"), &RenderSceneData::get_transform_count);
+	ClassDB::bind_method(D_METHOD("get_transform_buffer"), &RenderSceneData::get_transform_buffer);
 }
 
 void RenderSceneDataExtension::_bind_methods() {
@@ -49,6 +51,8 @@ void RenderSceneDataExtension::_bind_methods() {
 	GDVIRTUAL_BIND(_get_view_projection, "view");
 
 	GDVIRTUAL_BIND(_get_uniform_buffer);
+	GDVIRTUAL_BIND(_get_transform_count);
+	GDVIRTUAL_BIND(_get_transform_buffer);
 }
 
 Transform3D RenderSceneDataExtension::get_cam_transform() const {
@@ -84,5 +88,17 @@ Projection RenderSceneDataExtension::get_view_projection(uint32_t p_view) const 
 RID RenderSceneDataExtension::get_uniform_buffer() const {
 	RID ret;
 	GDVIRTUAL_CALL(_get_uniform_buffer, ret);
+	return ret;
+}
+
+int RenderSceneDataExtension::get_transform_count() const {
+	int ret = 0;
+	GDVIRTUAL_CALL(_get_transform_count, ret);
+	return ret;
+}
+
+RID RenderSceneDataExtension::get_transform_buffer() const {
+	RID ret;
+	GDVIRTUAL_CALL(_get_transform_buffer, ret);
 	return ret;
 }

@@ -776,11 +776,29 @@ void RenderForwardClustered::_update_instance_data_buffer(RenderListType p_rende
 		RD::get_singleton()->buffer_update(scene_state.instance_buffer[p_render_list], 0, sizeof(SceneState::InstanceData) * scene_state.instance_data[p_render_list].size(), scene_state.instance_data[p_render_list].ptr());
 	}
 }
+
+void RenderForwardClustered::_update_transform_data_buffer(RenderListType p_render_list) {
+	if (scene_state.transform_data[p_render_list].size() > 0) {
+		if (scene_state.transform_buffer[p_render_list] == RID() || scene_state.transform_buffer_size[p_render_list] < scene_state.transform_data[p_render_list].size()) {
+			if (scene_state.transform_buffer[p_render_list] != RID()) {
+				RD::get_singleton()->free(scene_state.transform_buffer[p_render_list]);
+			}
+			uint32_t new_size = nearest_power_of_2_templated(MAX(uint64_t(INSTANCE_DATA_BUFFER_MIN_SIZE), scene_state.transform_data[p_render_list].size()));
+			BitField<RD::StorageBufferUsage> usage = (RD::STORAGE_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY | RD::STORAGE_BUFFER_USAGE_DEVICE_ADDRESS);
+			scene_state.transform_buffer[p_render_list] = RD::get_singleton()->storage_buffer_create(new_size * sizeof(SceneState::TransformData), {}, usage);
+			scene_state.transform_buffer_size[p_render_list] = new_size;
+		}
+		RD::get_singleton()->buffer_update(scene_state.transform_buffer[p_render_list], 0, sizeof(SceneState::TransformData) * scene_state.transform_data[p_render_list].size(), scene_state.transform_data[p_render_list].ptr());
+	}
+}
+
 void RenderForwardClustered::_fill_instance_data(RenderListType p_render_list, int *p_render_info, uint32_t p_offset, int32_t p_max_elements, bool p_update_buffer) {
 	RenderList *rl = &render_list[p_render_list];
 	uint32_t element_total = p_max_elements >= 0 ? uint32_t(p_max_elements) : rl->elements.size();
 
 	scene_state.instance_data[p_render_list].resize(p_offset + element_total);
+	scene_state.transform_data[p_render_list].resize(p_offset + element_total);
+	scene_state.transform_count[p_render_list] = (p_offset + element_total);
 	rl->element_info.resize(p_offset + element_total);
 
 	if (p_render_info) {
@@ -794,6 +812,7 @@ void RenderForwardClustered::_fill_instance_data(RenderListType p_render_list, i
 		GeometryInstanceForwardClustered *inst = surface->owner;
 
 		SceneState::InstanceData &instance_data = scene_state.instance_data[p_render_list][i + p_offset];
+		SceneState::TransformData &transform_data = scene_state.transform_data[p_render_list][i + p_offset];
 
 		if (inst->prev_transform_dirty && frame > inst->prev_transform_change_frame + 1 && inst->prev_transform_change_frame) {
 			inst->prev_transform = inst->transform;
@@ -803,6 +822,7 @@ void RenderForwardClustered::_fill_instance_data(RenderListType p_render_list, i
 		if (inst->store_transform_cache) {
 			RendererRD::MaterialStorage::store_transform(inst->transform, instance_data.transform);
 			RendererRD::MaterialStorage::store_transform(inst->prev_transform, instance_data.prev_transform);
+			RendererRD::MaterialStorage::store_transform_transposed_3x4(inst->transform, transform_data.transform);
 
 #ifdef REAL_T_IS_DOUBLE
 			// Split the origin into two components, the float approximation and the missing precision.
@@ -814,6 +834,7 @@ void RenderForwardClustered::_fill_instance_data(RenderListType p_render_list, i
 		} else {
 			RendererRD::MaterialStorage::store_transform(Transform3D(), instance_data.transform);
 			RendererRD::MaterialStorage::store_transform(Transform3D(), instance_data.prev_transform);
+			RendererRD::MaterialStorage::store_transform_transposed_3x4(Transform3D(), transform_data.transform);
 		}
 
 		instance_data.flags = inst->flags_cache;
@@ -887,6 +908,7 @@ void RenderForwardClustered::_fill_instance_data(RenderListType p_render_list, i
 
 	if (p_update_buffer) {
 		_update_instance_data_buffer(p_render_list);
+		_update_transform_data_buffer(p_render_list);
 	}
 }
 
@@ -4824,25 +4846,28 @@ Vector<RID> RenderForwardClustered::GeometryInstanceForwardClustered::get_vertex
 	GeometryInstanceSurfaceDataCache *surf = surface_caches;
 
 	while (surf) {
-		RID vertex_array = RID();
-		RD::VertexFormatID vertex_format = 0;
+		bool opaque_flag = surf->flags & GeometryInstanceSurfaceDataCache::FLAG_PASS_OPAQUE;
+		if (opaque_flag) {
+			RID vertex_array = RID();
+			RD::VertexFormatID vertex_format = 0;
 
-		SceneShaderForwardClustered::ShaderData::PipelineKey pipeline_key;
-		pipeline_key.version = SceneShaderForwardClustered::PIPELINE_VERSION_COLOR_PASS;
-		pipeline_key.color_pass_flags = SceneShaderForwardClustered::PIPELINE_COLOR_PASS_FLAG_TRANSPARENT;
-		pipeline_key.ubershader = 0;
+			SceneShaderForwardClustered::ShaderData::PipelineKey pipeline_key;
+			pipeline_key.version = SceneShaderForwardClustered::PIPELINE_VERSION_COLOR_PASS;
+			pipeline_key.color_pass_flags = 0;
+			pipeline_key.ubershader = 0;
 
-		SceneShaderForwardClustered::ShaderData *shader = surf->shader;
-		uint64_t input_mask = shader->get_vertex_input_mask(pipeline_key.version, pipeline_key.color_pass_flags, pipeline_key.ubershader);
+			SceneShaderForwardClustered::ShaderData *shader = surf->shader;
+			uint64_t input_mask = shader->get_vertex_input_mask(pipeline_key.version, pipeline_key.color_pass_flags, pipeline_key.ubershader);
 
-		if (surf->owner->mesh_instance.is_valid()) {
-			mesh_storage->mesh_instance_surface_get_vertex_arrays_and_format(surf->owner->mesh_instance, surf->surface_index, input_mask, false, vertex_array, vertex_format);
-		} else {
-			auto mesh_surface = surf->surface;
-			mesh_storage->mesh_surface_get_vertex_arrays_and_format(mesh_surface, input_mask, false, vertex_array, vertex_format);
+			if (surf->owner->mesh_instance.is_valid()) {
+				mesh_storage->mesh_instance_surface_get_vertex_arrays_and_format(surf->owner->mesh_instance, surf->surface_index, input_mask, false, vertex_array, vertex_format);
+			} else {
+				auto mesh_surface = surf->surface;
+				mesh_storage->mesh_surface_get_vertex_arrays_and_format(mesh_surface, input_mask, false, vertex_array, vertex_format);
+			}
+
+			vertex_arrays.push_back(vertex_array);
 		}
-
-		vertex_arrays.push_back(vertex_array);
 
 		surf = surf->next;
 	}
@@ -4856,9 +4881,12 @@ Vector<RID> RenderForwardClustered::GeometryInstanceForwardClustered::get_index_
 	GeometryInstanceSurfaceDataCache *surf = surface_caches;
 
 	while (surf) {
-		int lod = surf->sort.lod_index;
-		RID index_array = mesh_storage->mesh_surface_get_index_array(surf->surface, lod);
-		index_arrays.push_back(index_array);
+		bool opaque_flag = surf->flags & GeometryInstanceSurfaceDataCache::FLAG_PASS_OPAQUE;
+		if (opaque_flag) {
+			int lod = surf->sort.lod_index;
+			RID index_array = mesh_storage->mesh_surface_get_index_array(surf->surface, lod);
+			index_arrays.push_back(index_array);
+		}
 		surf = surf->next;
 	}
 
@@ -5041,6 +5069,9 @@ RenderForwardClustered::~RenderForwardClustered() {
 		for (uint32_t i = 0; i < RENDER_LIST_MAX; i++) {
 			if (scene_state.instance_buffer[i] != RID()) {
 				RD::get_singleton()->free(scene_state.instance_buffer[i]);
+			}
+			if (scene_state.transform_buffer[i] != RID()) {
+				RD::get_singleton()->free(scene_state.transform_buffer[i]);
 			}
 		}
 		memdelete_arr(scene_state.lightmap_captures);

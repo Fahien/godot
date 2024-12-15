@@ -337,6 +337,9 @@ public:
 	virtual bool is_volumetric_supported() const;
 	virtual uint32_t get_max_elements() const;
 
+	virtual int get_transform_count() const { return 0; }
+	virtual RID get_transform_buffer() const {}
+
 	void init();
 
 	RendererSceneRenderRD();

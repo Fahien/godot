@@ -328,6 +328,10 @@ private:
 			float uv_scale[4];
 		};
 
+		struct TransformData {
+			float transform[12];
+		};
+
 		UBO ubo;
 
 		LocalVector<RID> uniform_buffers;
@@ -343,6 +347,11 @@ private:
 		RID instance_buffer[RENDER_LIST_MAX];
 		uint32_t instance_buffer_size[RENDER_LIST_MAX] = { 0, 0, 0 };
 		LocalVector<InstanceData> instance_data[RENDER_LIST_MAX];
+
+		RID transform_buffer[RENDER_LIST_MAX];
+		uint32_t transform_buffer_size[RENDER_LIST_MAX] = { 0, 0, 0, 0 };
+		uint32_t transform_count[RENDER_LIST_MAX] = { 0, 0, 0, 0 };
+		LocalVector<TransformData> transform_data[RENDER_LIST_MAX];
 
 		LightmapCaptureData *lightmap_captures = nullptr;
 		uint32_t max_lightmap_captures;
@@ -398,6 +407,7 @@ private:
 	void _render_list_with_draw_list(RenderListParameters *p_params, RID p_framebuffer, BitField<RD::DrawFlags> p_draw_flags = RD::DRAW_DEFAULT_ALL, const Vector<Color> &p_clear_color_values = Vector<Color>(), float p_clear_depth_value = 0.0, uint32_t p_clear_stencil_value = 0, const Rect2 &p_region = Rect2());
 
 	void _update_instance_data_buffer(RenderListType p_render_list);
+	void _update_transform_data_buffer(RenderListType p_render_list);
 	void _fill_instance_data(RenderListType p_render_list, int *p_render_info = nullptr, uint32_t p_offset = 0, int32_t p_max_elements = -1, bool p_update_buffer = true);
 	void _fill_render_list(RenderListType p_render_list, const RenderDataRD *p_render_data, PassMode p_pass_mode, bool p_using_sdfgi = false, bool p_using_opaque_gi = false, bool p_using_motion_pass = false, bool p_append = false);
 
@@ -742,6 +752,12 @@ public:
 
 	virtual void mesh_generate_pipelines(RID p_mesh, bool p_background_compilation) override;
 	virtual uint32_t get_pipeline_compilations(RS::PipelineSource p_source) override;
+
+	virtual int get_transform_count() const { return static_cast<int>(scene_state.transform_count[RENDER_LIST_OPAQUE]); }
+
+	virtual RID get_transform_buffer() const {
+		return scene_state.transform_buffer[RENDER_LIST_OPAQUE];
+	}
 
 	virtual bool free(RID p_rid) override;
 
