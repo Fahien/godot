@@ -514,6 +514,8 @@ private:
 		virtual void pair_voxel_gi_instances(const RID *p_voxel_gi_instances, uint32_t p_voxel_gi_instance_count) override;
 
 		virtual void set_softshadow_projector_pairing(bool p_softshadow, bool p_projector) override;
+
+		virtual Vector<RID> get_vertex_arrays() override;
 	};
 
 	static void _geometry_instance_dependency_changed(Dependency::DependencyChangedNotification p_notification, DependencyTracker *p_tracker);

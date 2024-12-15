@@ -4816,6 +4816,40 @@ void RenderForwardClustered::GeometryInstanceForwardClustered::set_softshadow_pr
 	_mark_dirty();
 }
 
+Vector<RID> RenderForwardClustered::GeometryInstanceForwardClustered::get_vertex_arrays() {
+	RendererRD::MeshStorage *mesh_storage = RendererRD::MeshStorage::get_singleton();
+
+	Vector<RID> vertex_arrays;
+
+	GeometryInstanceSurfaceDataCache *surf = surface_caches;
+
+	while (surf) {
+		RID vertex_array = RID();
+		RD::VertexFormatID vertex_format = 0;
+
+		SceneShaderForwardClustered::ShaderData::PipelineKey pipeline_key;
+		pipeline_key.version = SceneShaderForwardClustered::PIPELINE_VERSION_COLOR_PASS;
+		pipeline_key.color_pass_flags = SceneShaderForwardClustered::PIPELINE_COLOR_PASS_FLAG_TRANSPARENT;
+		pipeline_key.ubershader = 0;
+
+		SceneShaderForwardClustered::ShaderData *shader = surf->shader;
+		uint64_t input_mask = shader->get_vertex_input_mask(pipeline_key.version, pipeline_key.color_pass_flags, pipeline_key.ubershader);
+
+		if (surf->owner->mesh_instance.is_valid()) {
+			mesh_storage->mesh_instance_surface_get_vertex_arrays_and_format(surf->owner->mesh_instance, surf->surface_index, input_mask, false, vertex_array, vertex_format);
+		} else {
+			auto mesh_surface = surf->surface;
+			mesh_storage->mesh_surface_get_vertex_arrays_and_format(mesh_surface, input_mask, false, vertex_array, vertex_format);
+		}
+
+		vertex_arrays.push_back(vertex_array);
+
+		surf = surf->next;
+	}
+
+	return vertex_arrays;
+}
+
 void RenderForwardClustered::_update_shader_quality_settings() {
 	SceneShaderForwardClustered::ShaderSpecialization specialization = {};
 	specialization.decal_use_mipmaps = decals_get_filter() == RS::DECAL_FILTER_NEAREST_MIPMAPS ||

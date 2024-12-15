@@ -141,3 +141,7 @@ Transform3D RenderGeometryInstanceBase::get_transform() {
 AABB RenderGeometryInstanceBase::get_aabb() {
 	return data->aabb;
 }
+
+Vector<RID> RenderGeometryInstanceBase::get_vertex_arrays() {
+	return {};
+}
