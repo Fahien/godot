@@ -69,3 +69,19 @@ TypedArray<RID> RenderDataRD::get_vertex_arrays(int p_instance) const {
 	}
 	return ret;
 }
+
+TypedArray<RID> RenderDataRD::get_index_arrays(int p_instance) const {
+	TypedArray<RID> ret;
+
+	if (instances == nullptr) {
+		return ret;
+	}
+
+	RenderGeometryInstance *inst = (*instances)[p_instance];
+
+	Vector<RID> index_arrays = inst->get_index_arrays();
+	for (int i = 0; i < index_arrays.size(); i++) {
+		ret.push_back(index_arrays[i]);
+	}
+	return ret;
+}

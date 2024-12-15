@@ -49,6 +49,7 @@ public:
 	virtual RID get_camera_attributes() const = 0;
 	virtual int get_instance_count() const = 0;
 	virtual TypedArray<RID> get_vertex_arrays(int p_instance) const = 0;
+	virtual TypedArray<RID> get_index_arrays(int p_instance) const = 0;
 };
 
 class RenderDataExtension : public RenderData {
@@ -64,6 +65,7 @@ protected:
 	virtual RID get_camera_attributes() const override;
 	virtual int get_instance_count() const override;
 	virtual TypedArray<RID> get_vertex_arrays(int p_instance) const override;
+	virtual TypedArray<RID> get_index_arrays(int p_instance) const override;
 
 	GDVIRTUAL0RC(Ref<RenderSceneBuffers>, _get_render_scene_buffers)
 	GDVIRTUAL0RC(RenderSceneData *, _get_render_scene_data)
@@ -71,6 +73,7 @@ protected:
 	GDVIRTUAL0RC(RID, _get_camera_attributes)
 	GDVIRTUAL0RC(int, _get_instance_count)
 	GDVIRTUAL1RC(TypedArray<RID>, _get_vertex_arrays, int)
+	GDVIRTUAL1RC(TypedArray<RID>, _get_index_arrays, int)
 };
 
 #endif // RENDER_DATA_H
