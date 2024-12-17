@@ -35,9 +35,6 @@ void RenderData::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_render_scene_data"), &RenderData::get_render_scene_data);
 	ClassDB::bind_method(D_METHOD("get_environment"), &RenderData::get_environment);
 	ClassDB::bind_method(D_METHOD("get_camera_attributes"), &RenderData::get_camera_attributes);
-	ClassDB::bind_method(D_METHOD("get_instance_count"), &RenderData::get_instance_count);
-	ClassDB::bind_method(D_METHOD("get_vertex_arrays", "instance"), &RenderData::get_vertex_arrays);
-	ClassDB::bind_method(D_METHOD("get_index_arrays", "instance"), &RenderData::get_index_arrays);
 }
 
 void RenderDataExtension::_bind_methods() {
@@ -45,9 +42,6 @@ void RenderDataExtension::_bind_methods() {
 	GDVIRTUAL_BIND(_get_render_scene_data)
 	GDVIRTUAL_BIND(_get_environment)
 	GDVIRTUAL_BIND(_get_camera_attributes)
-	GDVIRTUAL_BIND(_get_instance_count)
-	GDVIRTUAL_BIND(_get_vertex_arrays, "instance")
-	GDVIRTUAL_BIND(_get_index_arrays, "instance")
 }
 
 Ref<RenderSceneBuffers> RenderDataExtension::get_render_scene_buffers() const {
@@ -71,23 +65,5 @@ RID RenderDataExtension::get_environment() const {
 RID RenderDataExtension::get_camera_attributes() const {
 	RID ret;
 	GDVIRTUAL_CALL(_get_camera_attributes, ret);
-	return ret;
-}
-
-int RenderDataExtension::get_instance_count() const {
-	int ret = 0;
-	GDVIRTUAL_CALL(_get_instance_count, ret);
-	return ret;
-}
-
-TypedArray<RID> RenderDataExtension::get_vertex_arrays(int p_instance) const {
-	TypedArray<RID> ret;
-	GDVIRTUAL_CALL(_get_vertex_arrays, p_instance, ret);
-	return ret;
-}
-
-TypedArray<RID> RenderDataExtension::get_index_arrays(int p_instance) const {
-	TypedArray<RID> ret;
-	GDVIRTUAL_CALL(_get_index_arrays, p_instance, ret);
 	return ret;
 }
