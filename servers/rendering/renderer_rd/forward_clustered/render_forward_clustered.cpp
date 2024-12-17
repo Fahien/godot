@@ -4838,56 +4838,55 @@ void RenderForwardClustered::GeometryInstanceForwardClustered::set_softshadow_pr
 	_mark_dirty();
 }
 
-Vector<RID> RenderForwardClustered::GeometryInstanceForwardClustered::get_vertex_arrays() {
+TypedArray<RID> RenderForwardClustered::get_vertex_arrays() const {
 	RendererRD::MeshStorage *mesh_storage = RendererRD::MeshStorage::get_singleton();
 
-	Vector<RID> vertex_arrays;
+	TypedArray<RID> vertex_arrays;
 
-	GeometryInstanceSurfaceDataCache *surf = surface_caches;
+	for (uint32_t i = 0; i < render_list->elements.size(); i++) {
+		auto *surf = render_list->elements[i];
 
-	while (surf) {
 		bool opaque_flag = surf->flags & GeometryInstanceSurfaceDataCache::FLAG_PASS_OPAQUE;
-		if (opaque_flag) {
-			RID vertex_array = RID();
-			RD::VertexFormatID vertex_format = 0;
+		if (!opaque_flag) {
+			continue;
+		}
+		RID vertex_array = RID();
+		RD::VertexFormatID vertex_format = 0;
 
-			SceneShaderForwardClustered::ShaderData::PipelineKey pipeline_key;
-			pipeline_key.version = SceneShaderForwardClustered::PIPELINE_VERSION_COLOR_PASS;
-			pipeline_key.color_pass_flags = 0;
-			pipeline_key.ubershader = 0;
+		SceneShaderForwardClustered::ShaderData::PipelineKey pipeline_key;
+		pipeline_key.version = SceneShaderForwardClustered::PIPELINE_VERSION_COLOR_PASS;
+		pipeline_key.color_pass_flags = 0;
+		pipeline_key.ubershader = 0;
 
-			SceneShaderForwardClustered::ShaderData *shader = surf->shader;
-			uint64_t input_mask = shader->get_vertex_input_mask(pipeline_key.version, pipeline_key.color_pass_flags, pipeline_key.ubershader);
+		SceneShaderForwardClustered::ShaderData *shader = surf->shader;
+		uint64_t input_mask = shader->get_vertex_input_mask(pipeline_key.version, pipeline_key.color_pass_flags, pipeline_key.ubershader);
 
-			if (surf->owner->mesh_instance.is_valid()) {
-				mesh_storage->mesh_instance_surface_get_vertex_arrays_and_format(surf->owner->mesh_instance, surf->surface_index, input_mask, false, vertex_array, vertex_format);
-			} else {
-				auto mesh_surface = surf->surface;
-				mesh_storage->mesh_surface_get_vertex_arrays_and_format(mesh_surface, input_mask, false, vertex_array, vertex_format);
-			}
-
-			vertex_arrays.push_back(vertex_array);
+		if (surf->owner->mesh_instance.is_valid()) {
+			mesh_storage->mesh_instance_surface_get_vertex_arrays_and_format(surf->owner->mesh_instance, surf->surface_index, input_mask, false, vertex_array, vertex_format);
+		} else {
+			auto mesh_surface = surf->surface;
+			mesh_storage->mesh_surface_get_vertex_arrays_and_format(mesh_surface, input_mask, false, vertex_array, vertex_format);
 		}
 
-		surf = surf->next;
+		vertex_arrays.push_back(vertex_array);
 	}
 
 	return vertex_arrays;
 }
 
-Vector<RID> RenderForwardClustered::GeometryInstanceForwardClustered::get_index_arrays() {
+TypedArray<RID> RenderForwardClustered::get_index_arrays() const {
 	RendererRD::MeshStorage *mesh_storage = RendererRD::MeshStorage::get_singleton();
-	Vector<RID> index_arrays;
-	GeometryInstanceSurfaceDataCache *surf = surface_caches;
+	TypedArray<RID> index_arrays;
 
-	while (surf) {
+	for (uint32_t i = 0; i < render_list->elements.size(); i++) {
+		auto *surf = render_list->elements[i];
 		bool opaque_flag = surf->flags & GeometryInstanceSurfaceDataCache::FLAG_PASS_OPAQUE;
-		if (opaque_flag) {
-			int lod = surf->sort.lod_index;
-			RID index_array = mesh_storage->mesh_surface_get_index_array(surf->surface, lod);
-			index_arrays.push_back(index_array);
+		if (!opaque_flag) {
+			continue;
 		}
-		surf = surf->next;
+		int lod = surf->sort.lod_index;
+		RID index_array = mesh_storage->mesh_surface_get_index_array(surf->surface, lod);
+		index_arrays.push_back(index_array);
 	}
 
 	return index_arrays;

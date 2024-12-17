@@ -524,9 +524,6 @@ private:
 		virtual void pair_voxel_gi_instances(const RID *p_voxel_gi_instances, uint32_t p_voxel_gi_instance_count) override;
 
 		virtual void set_softshadow_projector_pairing(bool p_softshadow, bool p_projector) override;
-
-		virtual Vector<RID> get_vertex_arrays() override;
-		virtual Vector<RID> get_index_arrays() override;
 	};
 
 	static void _geometry_instance_dependency_changed(Dependency::DependencyChangedNotification p_notification, DependencyTracker *p_tracker);
@@ -752,6 +749,9 @@ public:
 
 	virtual void mesh_generate_pipelines(RID p_mesh, bool p_background_compilation) override;
 	virtual uint32_t get_pipeline_compilations(RS::PipelineSource p_source) override;
+
+	virtual TypedArray<RID> get_vertex_arrays() const override;
+	virtual TypedArray<RID> get_index_arrays() const override;
 
 	virtual int get_transform_count() const { return static_cast<int>(scene_state.transform_count[RENDER_LIST_OPAQUE]); }
 

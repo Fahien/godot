@@ -41,6 +41,8 @@ void RenderSceneData::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_uniform_buffer"), &RenderSceneData::get_uniform_buffer);
 	ClassDB::bind_method(D_METHOD("get_transform_count"), &RenderSceneData::get_transform_count);
 	ClassDB::bind_method(D_METHOD("get_transform_buffer"), &RenderSceneData::get_transform_buffer);
+	ClassDB::bind_method(D_METHOD("get_vertex_arrays"), &RenderSceneData::get_vertex_arrays);
+	ClassDB::bind_method(D_METHOD("get_index_arrays"), &RenderSceneData::get_index_arrays);
 }
 
 void RenderSceneDataExtension::_bind_methods() {
@@ -53,6 +55,8 @@ void RenderSceneDataExtension::_bind_methods() {
 	GDVIRTUAL_BIND(_get_uniform_buffer);
 	GDVIRTUAL_BIND(_get_transform_count);
 	GDVIRTUAL_BIND(_get_transform_buffer);
+	GDVIRTUAL_BIND(_get_vertex_arrays);
+	GDVIRTUAL_BIND(_get_index_arrays);
 }
 
 Transform3D RenderSceneDataExtension::get_cam_transform() const {
@@ -100,5 +104,17 @@ int RenderSceneDataExtension::get_transform_count() const {
 RID RenderSceneDataExtension::get_transform_buffer() const {
 	RID ret;
 	GDVIRTUAL_CALL(_get_transform_buffer, ret);
+	return ret;
+}
+
+TypedArray<RID> RenderSceneDataExtension::get_vertex_arrays() const {
+	TypedArray<RID> ret;
+	GDVIRTUAL_CALL(_get_vertex_arrays, ret);
+	return ret;
+}
+
+TypedArray<RID> RenderSceneDataExtension::get_index_arrays() const {
+	TypedArray<RID> ret;
+	GDVIRTUAL_CALL(_get_index_arrays, ret);
 	return ret;
 }

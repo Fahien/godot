@@ -65,8 +65,6 @@ public:
 
 		virtual Transform3D get_transform() override { return Transform3D(); }
 		virtual AABB get_aabb() override { return AABB(); }
-		virtual Vector<RID> get_vertex_arrays() override { return {}; }
-		virtual Vector<RID> get_index_arrays() override { return {}; }
 
 		virtual void pair_light_instances(const RID *p_light_instances, uint32_t p_light_instance_count) override {}
 		virtual void pair_reflection_probe_instances(const RID *p_reflection_probe_instances, uint32_t p_reflection_probe_instance_count) override {}
