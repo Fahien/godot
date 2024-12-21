@@ -3232,6 +3232,7 @@ RID RenderingDevice::vertex_array_create(uint32_t p_vertex_count, VertexFormatID
 		}
 
 		vertex_array.buffers.push_back(buffer->driver_id);
+		vertex_array.buffer_rids.push_back(p_src_buffers[i]);
 
 		if (buffer->draw_tracker != nullptr) {
 			vertex_array.draw_trackers.push_back(buffer->draw_tracker);
@@ -3251,6 +3252,24 @@ RID RenderingDevice::vertex_array_create(uint32_t p_vertex_count, VertexFormatID
 	}
 
 	return id;
+}
+
+RID RenderingDevice::vertex_array_get_buffer(RID p_vertex_array, uint32_t p_buffer_index)
+{
+	_THREAD_SAFE_METHOD_
+	ERR_FAIL_COND_V(!vertex_array_owner.owns(p_vertex_array), RID());
+	VertexArray *vertex_array = vertex_array_owner.get_or_null(p_vertex_array);
+	ERR_FAIL_COND_V(p_buffer_index >= vertex_array->buffer_rids.size(), RID());
+	return vertex_array->buffer_rids[p_buffer_index];
+}
+
+uint32_t RenderingDevice::vertex_array_get_buffer_offset(RID p_vertex_array, uint32_t p_buffer_index)
+{
+	_THREAD_SAFE_METHOD_
+	ERR_FAIL_COND_V(!vertex_array_owner.owns(p_vertex_array), 0);
+	VertexArray *vertex_array = vertex_array_owner.get_or_null(p_vertex_array);
+	ERR_FAIL_COND_V(p_buffer_index >= vertex_array->buffer_rids.size(), 0);
+	return vertex_array->offsets[p_buffer_index];
 }
 
 RID RenderingDevice::index_buffer_create(uint32_t p_index_count, IndexBufferFormat p_format, const Vector<uint8_t> &p_data, bool p_use_restart_indices, bool p_enable_device_address) {
@@ -3330,6 +3349,7 @@ RID RenderingDevice::index_array_create(RID p_index_buffer, uint32_t p_index_off
 	ERR_FAIL_COND_V(p_index_offset + p_index_count > index_buffer->index_count, RID());
 
 	IndexArray index_array;
+	index_array.buffer = p_index_buffer;
 	index_array.max_index = index_buffer->max_index;
 	index_array.driver_id = index_buffer->driver_id;
 	index_array.draw_tracker = index_buffer->draw_tracker;
@@ -3343,6 +3363,22 @@ RID RenderingDevice::index_array_create(RID p_index_buffer, uint32_t p_index_off
 	RID id = index_array_owner.make_rid(index_array);
 	_add_dependency(id, p_index_buffer);
 	return id;
+}
+
+RID RenderingDevice::index_array_get_buffer(RID p_index_array)
+{
+	_THREAD_SAFE_METHOD_
+	ERR_FAIL_COND_V(!index_array_owner.owns(p_index_array), RID());
+	IndexArray *index_array = index_array_owner.get_or_null(p_index_array);
+	return index_array->buffer;
+}
+
+uint32_t RenderingDevice::index_array_get_buffer_offset(RID p_index_array)
+{
+	_THREAD_SAFE_METHOD_
+	ERR_FAIL_COND_V(!index_array_owner.owns(p_index_array), 0);
+	IndexArray *index_array = index_array_owner.get_or_null(p_index_array);
+	return index_array->offset;
 }
 
 /****************/
@@ -7798,9 +7834,13 @@ void RenderingDevice::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("vertex_buffer_create", "size_bytes", "data", "use_as_storage", "enable_device_address"), &RenderingDevice::vertex_buffer_create, DEFVAL(Vector<uint8_t>()), DEFVAL(false), DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("vertex_format_create", "vertex_descriptions"), &RenderingDevice::_vertex_format_create);
 	ClassDB::bind_method(D_METHOD("vertex_array_create", "vertex_count", "vertex_format", "src_buffers", "offsets"), &RenderingDevice::_vertex_array_create, DEFVAL(Vector<int64_t>()));
+	ClassDB::bind_method(D_METHOD("vertex_array_get_buffer", "array", "buffer_index"), &RenderingDevice::vertex_array_get_buffer, DEFVAL(0));
+	ClassDB::bind_method(D_METHOD("vertex_array_get_buffer_offset", "array", "buffer_index"), &RenderingDevice::vertex_array_get_buffer_offset, DEFVAL(0));
 
 	ClassDB::bind_method(D_METHOD("index_buffer_create", "size_indices", "format", "data", "use_restart_indices", "enable_device_address"), &RenderingDevice::index_buffer_create, DEFVAL(Vector<uint8_t>()), DEFVAL(false), DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("index_array_create", "index_buffer", "index_offset", "index_count"), &RenderingDevice::index_array_create);
+	ClassDB::bind_method(D_METHOD("index_array_get_buffer", "array"), &RenderingDevice::index_array_get_buffer);
+	ClassDB::bind_method(D_METHOD("index_array_get_buffer_offset", "array"), &RenderingDevice::index_array_get_buffer_offset);
 
 	ClassDB::bind_method(D_METHOD("shader_compile_spirv_from_source", "shader_source", "allow_cache"), &RenderingDevice::_shader_compile_spirv_from_source, DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("shader_compile_binary_from_spirv", "spirv_data", "name"), &RenderingDevice::_shader_compile_binary_from_spirv, DEFVAL(""));
