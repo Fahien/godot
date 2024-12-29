@@ -5523,7 +5523,7 @@ RDD::AccelerationStructureID RenderingDeviceDriverVulkan::blas_create(BufferID p
 	const VertexFormatInfo *vf_info = (const VertexFormatInfo *)p_vertex_format.id;
 	VkDeviceSize buffer_offset = vf_info->vk_attributes[0].offset;
 
-	VkDeviceAddress vertex_address = buffer_get_device_address(p_vertex_buffer) + buffer_offset;
+	VkDeviceAddress vertex_address = buffer_get_device_address(p_vertex_buffer) + buffer_offset + p_vertex_offset;
 	VkDeviceAddress index_address = buffer_get_device_address(p_index_buffer) + p_index_offset_bytes;
 
 	VkDeviceSize vertex_stride = vf_info->vk_bindings[0].stride;
@@ -5555,7 +5555,7 @@ RDD::AccelerationStructureID RenderingDeviceDriverVulkan::blas_create(BufferID p
 	}
 	// The vertex offset is expressed in bytes.
 	uint32_t first_vertex = p_vertex_offset / vertex_stride;
-	accel_info->range_info.firstVertex = first_vertex;
+	accel_info->range_info.firstVertex = 0;
 	accel_info->range_info.primitiveCount = primitive_count;
 	accel_info->range_info.primitiveOffset = 0;
 	accel_info->range_info.transformOffset = 0;
@@ -5611,7 +5611,7 @@ RDD::AccelerationStructureID RenderingDeviceDriverVulkan::tlas_create(const Loca
 		instance.mask = 0xFF;
 		instance.accelerationStructureReference = buffer_get_device_address(blas_info->buffer);
 		instance.instanceShaderBindingTableRecordOffset = 0;
-		instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+		instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR;
 
 		accel_info->instances.push_back(instance);
 	}

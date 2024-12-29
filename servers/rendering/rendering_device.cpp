@@ -3378,7 +3378,7 @@ uint32_t RenderingDevice::index_array_get_buffer_offset(RID p_index_array)
 	_THREAD_SAFE_METHOD_
 	ERR_FAIL_COND_V(!index_array_owner.owns(p_index_array), 0);
 	IndexArray *index_array = index_array_owner.get_or_null(p_index_array);
-	return index_array->offset;
+	return index_array->offset * (index_array->format == INDEX_BUFFER_FORMAT_UINT16 ? sizeof(uint16_t) : sizeof(uint32_t));
 }
 
 /****************/

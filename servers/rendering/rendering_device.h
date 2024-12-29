@@ -773,7 +773,7 @@ private:
 		uint32_t max_index = 0; // Remember the maximum index here too, for validation.
 		RDD::BufferID driver_id; // Not owned, inherited from index buffer.
 		RDG::ResourceTracker *draw_tracker = nullptr; // Not owned, inherited from index buffer.
-		// TODO: offset in bytes or offset in number of indices?
+		// Offset in number of indices
 		uint32_t offset = 0;
 		uint32_t indices = 0;
 		IndexBufferFormat format = INDEX_BUFFER_FORMAT_UINT16;

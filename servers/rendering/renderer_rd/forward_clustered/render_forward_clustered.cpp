@@ -4838,18 +4838,14 @@ void RenderForwardClustered::GeometryInstanceForwardClustered::set_softshadow_pr
 	_mark_dirty();
 }
 
-TypedArray<RID> RenderForwardClustered::get_vertex_arrays() const {
+TypedArray<RID> RenderForwardClustered::get_vertex_arrays(uint32_t p_render_list_index) const {
 	RendererRD::MeshStorage *mesh_storage = RendererRD::MeshStorage::get_singleton();
 
 	TypedArray<RID> vertex_arrays;
 
-	for (uint32_t i = 0; i < render_list->elements.size(); i++) {
-		auto *surf = render_list->elements[i];
+	for (uint32_t i = 0; i < render_list[p_render_list_index].elements.size(); i++) {
+		auto *surf = render_list[p_render_list_index].elements[i];
 
-		bool opaque_flag = surf->flags & GeometryInstanceSurfaceDataCache::FLAG_PASS_OPAQUE;
-		if (!opaque_flag) {
-			continue;
-		}
 		RID vertex_array = RID();
 		RD::VertexFormatID vertex_format = 0;
 
@@ -4874,22 +4870,28 @@ TypedArray<RID> RenderForwardClustered::get_vertex_arrays() const {
 	return vertex_arrays;
 }
 
-TypedArray<RID> RenderForwardClustered::get_index_arrays() const {
+TypedArray<RID> RenderForwardClustered::get_index_arrays(uint32_t p_render_list_index) const {
 	RendererRD::MeshStorage *mesh_storage = RendererRD::MeshStorage::get_singleton();
 	TypedArray<RID> index_arrays;
 
-	for (uint32_t i = 0; i < render_list->elements.size(); i++) {
-		auto *surf = render_list->elements[i];
-		bool opaque_flag = surf->flags & GeometryInstanceSurfaceDataCache::FLAG_PASS_OPAQUE;
-		if (!opaque_flag) {
-			continue;
-		}
+	for (uint32_t i = 0; i < render_list[p_render_list_index].elements.size(); i++) {
+		auto *surf = render_list[p_render_list_index].elements[i];
 		int lod = surf->sort.lod_index;
 		RID index_array = mesh_storage->mesh_surface_get_index_array(surf->surface, lod);
 		index_arrays.push_back(index_array);
 	}
 
 	return index_arrays;
+}
+
+uint32_t RenderForwardClustered::get_transform_count(uint32_t p_render_list_index) const {
+	ERR_FAIL_COND_V(p_render_list_index >= RENDER_LIST_MAX, 0);
+	return scene_state.transform_count[p_render_list_index];
+}
+
+RID RenderForwardClustered::get_transform_buffer(uint32_t p_render_list_index) const {
+	ERR_FAIL_COND_V(p_render_list_index >= RENDER_LIST_MAX, RID());
+	return scene_state.transform_buffer[p_render_list_index];
 }
 
 void RenderForwardClustered::_update_shader_quality_settings() {

@@ -337,10 +337,10 @@ public:
 	virtual bool is_volumetric_supported() const;
 	virtual uint32_t get_max_elements() const;
 
-	virtual int get_transform_count() const { return 0; }
-	virtual RID get_transform_buffer() const { return RID(); }
-	virtual TypedArray<RID> get_vertex_arrays() const { return {}; }
-	virtual TypedArray<RID> get_index_arrays() const { return {}; }
+	virtual uint32_t get_transform_count(uint32_t p_render_list_index) const { return 0; }
+	virtual RID get_transform_buffer(uint32_t p_render_list_index) const { return RID(); }
+	virtual TypedArray<RID> get_vertex_arrays(uint32_t p_render_list_index) const { return {}; }
+	virtual TypedArray<RID> get_index_arrays(uint32_t p_render_list_index) const { return {}; }
 
 	void init();
 

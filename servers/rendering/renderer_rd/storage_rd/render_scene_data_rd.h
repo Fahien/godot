@@ -93,10 +93,10 @@ public:
 	RID create_uniform_buffer();
 	void update_ubo(RID p_uniform_buffer, RS::ViewportDebugDraw p_debug_mode, RID p_env, RID p_reflection_probe_instance, RID p_camera_attributes, bool p_pancake_shadows, const Size2i &p_screen_size, const Color &p_default_bg_color, float p_luminance_multiplier, bool p_opaque_render_buffers, bool p_apply_alpha_multiplier);
 	virtual RID get_uniform_buffer() const override;
-	virtual TypedArray<RID> get_vertex_arrays() const override;
-	virtual TypedArray<RID> get_index_arrays() const override;
-	virtual int get_transform_count() const override;
-	virtual RID get_transform_buffer() const override;
+	virtual TypedArray<RID> get_vertex_arrays(uint32_t p_render_list_index) const override;
+	virtual TypedArray<RID> get_index_arrays(uint32_t p_render_list_index) const override;
+	virtual uint32_t get_transform_count(uint32_t p_render_list_index) const override;
+	virtual RID get_transform_buffer(uint32_t p_render_list_index) const override;
 
 private:
 	RID uniform_buffer; // loaded into this uniform buffer (supplied externally)

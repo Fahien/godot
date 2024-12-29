@@ -750,14 +750,10 @@ public:
 	virtual void mesh_generate_pipelines(RID p_mesh, bool p_background_compilation) override;
 	virtual uint32_t get_pipeline_compilations(RS::PipelineSource p_source) override;
 
-	virtual TypedArray<RID> get_vertex_arrays() const override;
-	virtual TypedArray<RID> get_index_arrays() const override;
-
-	virtual int get_transform_count() const { return static_cast<int>(scene_state.transform_count[RENDER_LIST_OPAQUE]); }
-
-	virtual RID get_transform_buffer() const {
-		return scene_state.transform_buffer[RENDER_LIST_OPAQUE];
-	}
+	virtual TypedArray<RID> get_vertex_arrays(uint32_t p_render_list_index) const override;
+	virtual TypedArray<RID> get_index_arrays(uint32_t p_render_list_index) const override;
+	virtual uint32_t get_transform_count(uint32_t p_render_list_index) const override;
+	virtual RID get_transform_buffer(uint32_t p_render_list_index) const override;
 
 	virtual bool free(RID p_rid) override;
 
