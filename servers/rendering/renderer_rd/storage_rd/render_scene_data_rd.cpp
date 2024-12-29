@@ -298,22 +298,22 @@ RID RenderSceneDataRD::get_uniform_buffer() const {
 	return uniform_buffer;
 }
 
-TypedArray<RID> RenderSceneDataRD::get_vertex_arrays() const {
+TypedArray<RID> RenderSceneDataRD::get_vertex_arrays(uint32_t p_render_list_index) const {
 	RendererSceneRenderRD *render_scene_render = RendererSceneRenderRD::get_singleton();
-	return render_scene_render->get_vertex_arrays();
+	return render_scene_render->get_vertex_arrays(p_render_list_index);
 }
 
-TypedArray<RID> RenderSceneDataRD::get_index_arrays() const {
+TypedArray<RID> RenderSceneDataRD::get_index_arrays(uint32_t p_render_list_index) const {
 	RendererSceneRenderRD *render_scene_render = RendererSceneRenderRD::get_singleton();
-	return render_scene_render->get_index_arrays();
+	return render_scene_render->get_index_arrays(p_render_list_index);
 }
 
-int RenderSceneDataRD::get_transform_count() const {
+uint32_t RenderSceneDataRD::get_transform_count(uint32_t p_render_list_index) const {
 	RendererSceneRenderRD *render_scene_render = RendererSceneRenderRD::get_singleton();
-	return render_scene_render->get_transform_count();
+	return render_scene_render->get_transform_count(p_render_list_index);
 }
 
-RID RenderSceneDataRD::get_transform_buffer() const {
+RID RenderSceneDataRD::get_transform_buffer(uint32_t p_render_list_index) const {
 	RendererSceneRenderRD *render_scene_render = RendererSceneRenderRD::get_singleton();
-	return render_scene_render->get_transform_buffer();
+	return render_scene_render->get_transform_buffer(p_render_list_index);
 }
