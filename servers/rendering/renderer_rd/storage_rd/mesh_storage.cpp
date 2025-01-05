@@ -67,7 +67,7 @@ MeshStorage::MeshStorage() {
 				fptr[1] = 0.0;
 				fptr[2] = 0.0;
 			}
-			mesh_default_rd_buffers[DEFAULT_RD_BUFFER_NORMAL] = RD::get_singleton()->vertex_buffer_create(buffer.size(), buffer);
+			mesh_default_rd_buffers[DEFAULT_RD_BUFFER_NORMAL] = RD::get_singleton()->vertex_buffer_create(buffer.size(), buffer, false, true);
 		}
 
 		{ //tangent
