@@ -754,6 +754,7 @@ public:
 	virtual TypedArray<RID> get_index_arrays(uint32_t p_render_list_index) const override;
 	virtual uint32_t get_transform_count(uint32_t p_render_list_index) const override;
 	virtual RID get_transform_buffer(uint32_t p_render_list_index) const override;
+	TypedArray<Transform3D> get_transforms(uint32_t p_render_list_index) const override;
 
 	virtual bool free(RID p_rid) override;
 

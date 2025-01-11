@@ -41,6 +41,7 @@ void RenderSceneData::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_uniform_buffer"), &RenderSceneData::get_uniform_buffer);
 	ClassDB::bind_method(D_METHOD("get_transform_count", "render_list_index"), &RenderSceneData::get_transform_count, DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("get_transform_buffer", "render_list_index"), &RenderSceneData::get_transform_buffer, DEFVAL(0));
+	ClassDB::bind_method(D_METHOD("get_transforms", "render_list_index"), &RenderSceneData::get_transforms, DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("get_vertex_arrays", "render_list_index"), &RenderSceneData::get_vertex_arrays, DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("get_index_arrays", "render_list_index"), &RenderSceneData::get_index_arrays, DEFVAL(0));
 }
@@ -55,6 +56,7 @@ void RenderSceneDataExtension::_bind_methods() {
 	GDVIRTUAL_BIND(_get_uniform_buffer);
 	GDVIRTUAL_BIND(_get_transform_count, "render_list_index");
 	GDVIRTUAL_BIND(_get_transform_buffer, "render_list_index");
+	GDVIRTUAL_BIND(_get_transforms, "render_list_index");
 	GDVIRTUAL_BIND(_get_vertex_arrays, "render_list_index");
 	GDVIRTUAL_BIND(_get_index_arrays, "render_list_index");
 }
@@ -104,6 +106,12 @@ uint32_t RenderSceneDataExtension::get_transform_count(uint32_t p_render_list_in
 RID RenderSceneDataExtension::get_transform_buffer(uint32_t p_render_list_index) const {
 	RID ret;
 	GDVIRTUAL_CALL(_get_transform_buffer, p_render_list_index, ret);
+	return ret;
+}
+
+TypedArray<Transform3D> RenderSceneDataExtension::get_transforms(uint32_t p_render_list_index) const {
+	TypedArray<Transform3D> ret;
+	GDVIRTUAL_CALL(_get_transforms, p_render_list_index, ret);
 	return ret;
 }
 

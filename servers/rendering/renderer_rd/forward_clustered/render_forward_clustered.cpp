@@ -4894,6 +4894,22 @@ RID RenderForwardClustered::get_transform_buffer(uint32_t p_render_list_index) c
 	return scene_state.transform_buffer[p_render_list_index];
 }
 
+TypedArray<Transform3D> RenderForwardClustered::get_transforms(uint32_t p_render_list_index) const {
+	TypedArray<Transform3D> transforms;
+
+	for (uint32_t i = 0; i < render_list[p_render_list_index].elements.size(); i++) {
+		auto *surf = render_list[p_render_list_index].elements[i];
+		auto *inst = surf->owner;
+		if (inst->store_transform_cache) {
+			transforms.push_back(inst->transform);
+		} else {
+			transforms.push_back(Transform3D());
+		}
+	}
+
+	return transforms;
+}
+
 void RenderForwardClustered::_update_shader_quality_settings() {
 	SceneShaderForwardClustered::ShaderSpecialization specialization = {};
 	specialization.decal_use_mipmaps = decals_get_filter() == RS::DECAL_FILTER_NEAREST_MIPMAPS ||

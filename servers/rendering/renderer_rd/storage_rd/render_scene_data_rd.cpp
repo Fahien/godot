@@ -317,3 +317,8 @@ RID RenderSceneDataRD::get_transform_buffer(uint32_t p_render_list_index) const 
 	RendererSceneRenderRD *render_scene_render = RendererSceneRenderRD::get_singleton();
 	return render_scene_render->get_transform_buffer(p_render_list_index);
 }
+
+TypedArray<Transform3D> RenderSceneDataRD::get_transforms(uint32_t p_render_list_index) const {
+	RendererSceneRenderRD *render_scene_render = RendererSceneRenderRD::get_singleton();
+	return render_scene_render->get_transforms(p_render_list_index);
+}
