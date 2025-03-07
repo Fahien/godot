@@ -791,6 +791,11 @@ void EditorNode::_notification(int p_what) {
 			}
 		} break;
 
+		case NOTIFICATION_APPLICATION_DRAG_IN: {
+			// Restore the original FPS cap after focusing back on the editor.
+			OS::get_singleton()->set_low_processor_usage_mode_sleep_usec(int(EDITOR_GET("interface/editor/low_processor_mode_sleep_usec")));
+		} break;
+
 		case NOTIFICATION_WM_ABOUT: {
 			show_about();
 		} break;

@@ -299,11 +299,20 @@
 // MARK: Drag and drop
 
 - (NSDragOperation)draggingEntered:(id<NSDraggingInfo>)sender {
+	if (OS::get_singleton()->get_main_loop()) {
+		OS::get_singleton()->get_main_loop()->notification(MainLoop::NOTIFICATION_APPLICATION_DRAG_IN);
+	}
 	return NSDragOperationCopy;
 }
 
 - (NSDragOperation)draggingUpdated:(id<NSDraggingInfo>)sender {
 	return NSDragOperationCopy;
+}
+
+- (void)draggingExited:(id<NSDraggingInfo>)sender {
+	if (OS::get_singleton()->get_main_loop()) {
+		OS::get_singleton()->get_main_loop()->notification(MainLoop::NOTIFICATION_APPLICATION_DRAG_OUT);
+	}
 }
 
 - (BOOL)performDragOperation:(id<NSDraggingInfo>)sender {
