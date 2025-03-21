@@ -1059,7 +1059,7 @@ void RenderingDeviceGraph::_run_render_commands(int32_t p_level, const RecordedC
 		switch (command->type) {
 			case RecordedCommand::TYPE_ACCELERATION_STRUCTURE_BUILD: {
 				const RecordedAccelerationStructureBuildCommand *as_build_command = reinterpret_cast<const RecordedAccelerationStructureBuildCommand *>(command);
-				driver->command_build_acceleration_structure(r_command_buffer, as_build_command->acceleration_structure);
+				driver->command_build_acceleration_structure(r_command_buffer, as_build_command->acceleration_structure, as_build_command->scratch_buffer);
 			} break;
 			case RecordedCommand::TYPE_BUFFER_CLEAR: {
 				const RecordedBufferClearCommand *buffer_clear_command = reinterpret_cast<const RecordedBufferClearCommand *>(command);
@@ -1740,12 +1740,13 @@ void RenderingDeviceGraph::begin() {
 #endif
 }
 
-void RenderingDeviceGraph::add_acceleration_structure_build(RDD::AccelerationStructureID p_acceleration_structure, ResourceTracker *p_dst_tracker, VectorView<ResourceTracker *> p_src_trackers) {
+void RenderingDeviceGraph::add_acceleration_structure_build(RDD::AccelerationStructureID p_acceleration_structure, RDD::BufferID p_scratch_buffer, ResourceTracker *p_dst_tracker, VectorView<ResourceTracker *> p_src_trackers) {
 	int32_t command_index;
 	RecordedAccelerationStructureBuildCommand *command = static_cast<RecordedAccelerationStructureBuildCommand *>(_allocate_command(sizeof(RecordedAccelerationStructureBuildCommand), command_index));
 	command->type = RecordedCommand::TYPE_ACCELERATION_STRUCTURE_BUILD;
 	command->self_stages = RDD::PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT;
 	command->acceleration_structure = p_acceleration_structure;
+	command->scratch_buffer = p_scratch_buffer;
 
 	thread_local LocalVector<ResourceTracker *> trackers;
 	thread_local LocalVector<ResourceUsage> usages;

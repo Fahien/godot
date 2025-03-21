@@ -6012,7 +6012,7 @@ void RenderingDeviceDriverD3D12::raytracing_pipeline_free(RDD::RaytracingPipelin
 
 // ----- COMMANDS -----
 
-void RenderingDeviceDriverD3D12::command_build_acceleration_structure(CommandBufferID p_cmd_buffer, AccelerationStructureID p_acceleration_structure) {
+void RenderingDeviceDriverD3D12::command_build_acceleration_structure(CommandBufferID p_cmd_buffer, AccelerationStructureID p_acceleration_structure, BufferID p_scratch_buffer) {
 	// TODO
 	ERR_FAIL_MSG("Unimplemented!");
 }

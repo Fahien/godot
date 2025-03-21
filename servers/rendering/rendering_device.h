@@ -174,6 +174,7 @@ private:
 		uint32_t block_size = 0;
 		uint64_t max_size = 0;
 		BitField<RDD::BufferUsageBits> usage_bits;
+		RDD::MemoryAllocationType allocation_type;
 		bool used = false;
 	};
 
@@ -1208,6 +1209,8 @@ private:
 
 	RID_Owner<InstancesBuffer, true> instances_buffer_owner;
 	RID_Owner<AccelerationStructure> acceleration_structure_owner;
+
+	StagingBuffers acceleration_structure_scratch_buffers;
 
 public:
 	enum GeometryBits {

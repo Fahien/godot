@@ -933,7 +933,7 @@ public:
 
 	// ----- COMMANDS -----
 
-	virtual void command_build_acceleration_structure(CommandBufferID p_cmd_buffer, AccelerationStructureID p_acceleration_structure) override final;
+	virtual void command_build_acceleration_structure(CommandBufferID p_cmd_buffer, AccelerationStructureID p_acceleration_structure, BufferID p_scratch_buffer) override final;
 	virtual void command_bind_raytracing_pipeline(CommandBufferID p_cmd_buffer, RaytracingPipelineID p_pipeline) override final;
 	virtual void command_bind_raytracing_uniform_set(CommandBufferID p_cmd_buffer, UniformSetID p_uniform_set, ShaderID p_shader, uint32_t p_set_index) override final;
 	virtual void command_trace_rays(CommandBufferID p_cmd_buffer, uint32_t p_width, uint32_t p_height) override final;

@@ -427,7 +427,21 @@ Error RenderingDevice::acceleration_structure_build(RID p_acceleration_structure
 			ERR_FAIL_V_MSG(ERR_INVALID_PARAMETER, "Invalid acceleration structure type");
 	}
 
-	draw_graph.add_acceleration_structure_build(accel->driver_id, accel->draw_tracker, src_trackers);
+	uint64_t scratch_size = driver->acceleration_structure_get_scratch_size_bytes(accel->driver_id);
+	uint64_t scratch_align = driver->acceleration_structure_get_scratch_alignment(accel->driver_id);
+
+	uint32_t block_write_offset;
+	uint32_t block_write_amount;
+	StagingRequiredAction required_action;
+	Error err = _staging_buffer_allocate(acceleration_structure_scratch_buffers, scratch_size, scratch_align, block_write_offset, block_write_amount, required_action);
+	if (err) {
+		return err;
+	}
+	_staging_buffer_execute_required_action(acceleration_structure_scratch_buffers, required_action);
+
+	RDD::BufferID scratch_buffer = acceleration_structure_scratch_buffers.blocks[acceleration_structure_scratch_buffers.current].driver_id;
+
+	draw_graph.add_acceleration_structure_build(accel->driver_id, scratch_buffer, accel->draw_tracker, src_trackers);
 
 	return OK;
 }
@@ -487,7 +501,7 @@ Error RenderingDevice::_buffer_initialize(Buffer *p_buffer, const uint8_t *p_dat
 Error RenderingDevice::_insert_staging_block(StagingBuffers &p_staging_buffers) {
 	StagingBufferBlock block;
 
-	block.driver_id = driver->buffer_create(p_staging_buffers.block_size, p_staging_buffers.usage_bits, RDD::MEMORY_ALLOCATION_TYPE_CPU);
+	block.driver_id = driver->buffer_create(p_staging_buffers.block_size, p_staging_buffers.usage_bits, p_staging_buffers.allocation_type);
 	ERR_FAIL_COND_V(!block.driver_id, ERR_CANT_CREATE);
 
 	block.frame_used = 0;
@@ -6987,6 +7001,11 @@ void RenderingDevice::_begin_frame(bool p_presented) {
 		download_staging_buffers.used = false;
 	}
 
+	if (acceleration_structure_scratch_buffers.used) {
+		acceleration_structure_scratch_buffers.current = (acceleration_structure_scratch_buffers.current + 1) % acceleration_structure_scratch_buffers.blocks.size();
+		acceleration_structure_scratch_buffers.used = false;
+	}
+
 	if (frames[frame].timestamp_count) {
 		driver->timestamp_query_pool_get_results(frames[frame].timestamp_pool, frames[frame].timestamp_count, frames[frame].timestamp_result_values.ptr());
 		driver->command_timestamp_query_pool_reset(frames[frame].command_buffer, frames[frame].timestamp_pool, frames[frame].timestamp_count);
@@ -7385,6 +7404,10 @@ Error RenderingDevice::initialize(RenderingContextDriver *p_context, DisplayServ
 	download_staging_buffers.block_size = upload_staging_buffers.block_size;
 	download_staging_buffers.max_size = upload_staging_buffers.max_size;
 
+	// Copy sizes to the acceleration structure scratch buffers.
+	acceleration_structure_scratch_buffers.block_size = upload_staging_buffers.block_size;
+	acceleration_structure_scratch_buffers.max_size = upload_staging_buffers.max_size;
+
 	texture_upload_region_size_px = GLOBAL_GET("rendering/rendering_device/staging_buffer/texture_upload_region_size_px");
 	texture_upload_region_size_px = nearest_power_of_2_templated(texture_upload_region_size_px);
 
@@ -7395,10 +7418,17 @@ Error RenderingDevice::initialize(RenderingContextDriver *p_context, DisplayServ
 	upload_staging_buffers.current = 0;
 	upload_staging_buffers.used = false;
 	upload_staging_buffers.usage_bits = RDD::BUFFER_USAGE_TRANSFER_FROM_BIT;
+	upload_staging_buffers.allocation_type = RDD::MEMORY_ALLOCATION_TYPE_CPU;
 
 	download_staging_buffers.current = 0;
 	download_staging_buffers.used = false;
 	download_staging_buffers.usage_bits = RDD::BUFFER_USAGE_TRANSFER_TO_BIT;
+	download_staging_buffers.allocation_type = RDD::MEMORY_ALLOCATION_TYPE_CPU;
+
+	acceleration_structure_scratch_buffers.current = 0;
+	acceleration_structure_scratch_buffers.used = false;
+	acceleration_structure_scratch_buffers.usage_bits = RDD::BUFFER_USAGE_STORAGE_BIT | RDD::BUFFER_USAGE_DEVICE_ADDRESS_BIT;
+	acceleration_structure_scratch_buffers.allocation_type = RDD::MEMORY_ALLOCATION_TYPE_GPU;
 
 	for (uint32_t i = 0; i < frames.size(); i++) {
 		// Staging was never used, create the blocks.
@@ -7406,6 +7436,9 @@ Error RenderingDevice::initialize(RenderingContextDriver *p_context, DisplayServ
 		ERR_FAIL_COND_V(err, FAILED);
 
 		err = _insert_staging_block(download_staging_buffers);
+		ERR_FAIL_COND_V(err, FAILED);
+
+		err = _insert_staging_block(acceleration_structure_scratch_buffers);
 		ERR_FAIL_COND_V(err, FAILED);
 	}
 
@@ -7794,6 +7827,10 @@ void RenderingDevice::finalize() {
 
 	for (int i = 0; i < download_staging_buffers.blocks.size(); i++) {
 		driver->buffer_free(download_staging_buffers.blocks[i].driver_id);
+	}
+
+	for (int i = 0; i < acceleration_structure_scratch_buffers.blocks.size(); i++) {
+		driver->buffer_free(acceleration_structure_scratch_buffers.blocks[i].driver_id);
 	}
 
 	while (vertex_formats.size()) {

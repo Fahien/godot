@@ -5731,12 +5731,13 @@ void RenderingDeviceDriverVulkan::_acceleration_structure_create(VkAccelerationS
 	r_accel_info->buffer = buffer;
 
 	// Scratch address must be a multiple of minAccelerationStructureScratchOffsetAlignment.
-	uint64_t padded_scratch_size = p_size_info.buildScratchSize + acceleration_structure_capabilities.min_acceleration_structure_scratch_offset_alignment;
+	r_accel_info->scratch_alignment = acceleration_structure_capabilities.min_acceleration_structure_scratch_offset_alignment;
+	r_accel_info->scratch_size = p_size_info.buildScratchSize + r_accel_info->scratch_alignment;
 
-	RDD::BufferID scratch_buffer = buffer_create(padded_scratch_size, RDD::BUFFER_USAGE_STORAGE_BIT | RDD::BUFFER_USAGE_DEVICE_ADDRESS_BIT, RDD::MEMORY_ALLOCATION_TYPE_GPU);
-	r_accel_info->scratch_buffer = scratch_buffer;
-	VkDeviceAddress scratch_address = buffer_get_device_address(scratch_buffer);
-	r_accel_info->build_info.scratchData.deviceAddress = _align_up_address(scratch_address, acceleration_structure_capabilities.min_acceleration_structure_scratch_offset_alignment);
+	//	RDD::BufferID scratch_buffer = buffer_create(padded_scratch_size, RDD::BUFFER_USAGE_STORAGE_BIT | RDD::BUFFER_USAGE_DEVICE_ADDRESS_BIT, RDD::MEMORY_ALLOCATION_TYPE_GPU);
+	//	r_accel_info->scratch_buffer = scratch_buffer;
+	//	VkDeviceAddress scratch_address = buffer_get_device_address(scratch_buffer);
+	//	r_accel_info->build_info.scratchData.deviceAddress = _align_up_address(scratch_address, acceleration_structure_capabilities.min_acceleration_structure_scratch_offset_alignment);
 
 	VkAccelerationStructureCreateInfoKHR accel_create_info = {};
 	accel_create_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
@@ -5752,11 +5753,9 @@ void RenderingDeviceDriverVulkan::_acceleration_structure_create(VkAccelerationS
 void RenderingDeviceDriverVulkan::acceleration_structure_free(AccelerationStructureID p_acceleration_structure) {
 #if !(defined(MACOS_ENABLED) || defined(IOS_ENABLED))
 	AccelerationStructureInfo *accel_info = (AccelerationStructureInfo *)p_acceleration_structure.id;
+	ERR_FAIL_NULL_MSG(accel_info, "Acceleration structure input parameter is not valid.");
 	if (accel_info->instances_buffer) {
 		buffer_free(accel_info->instances_buffer);
-	}
-	if (accel_info->scratch_buffer) {
-		buffer_free(accel_info->scratch_buffer);
 	}
 	if (accel_info->buffer) {
 		buffer_free(accel_info->buffer);
@@ -5768,13 +5767,31 @@ void RenderingDeviceDriverVulkan::acceleration_structure_free(AccelerationStruct
 #endif
 }
 
+uint32_t RenderingDeviceDriverVulkan::acceleration_structure_get_scratch_size_bytes(AccelerationStructureID p_acceleration_structure) {
+	AccelerationStructureInfo *accel_info = (AccelerationStructureInfo *)p_acceleration_structure.id;
+	ERR_FAIL_NULL_V_MSG(accel_info, 0, "Acceleration structure input parameter is not valid.");
+	return accel_info->scratch_size;
+}
+
+uint32_t RenderingDeviceDriverVulkan::acceleration_structure_get_scratch_alignment(AccelerationStructureID p_acceleration_structure) {
+	AccelerationStructureInfo *accel_info = (AccelerationStructureInfo *)p_acceleration_structure.id;
+	ERR_FAIL_NULL_V_MSG(accel_info, 0, "Acceleration structure input parameter is not valid.");
+	return accel_info->scratch_alignment;
+}
+
 // ----- COMMANDS -----
 
-void RenderingDeviceDriverVulkan::command_build_acceleration_structure(CommandBufferID p_cmd_buffer, AccelerationStructureID p_acceleration_structure) {
+void RenderingDeviceDriverVulkan::command_build_acceleration_structure(CommandBufferID p_cmd_buffer, AccelerationStructureID p_acceleration_structure, BufferID p_scratch_buffer) {
 #if !(defined(MACOS_ENABLED) || defined(IOS_ENABLED))
-	const AccelerationStructureInfo *accel_info = (const AccelerationStructureInfo *)p_acceleration_structure.id;
+	AccelerationStructureInfo *accel_info = (AccelerationStructureInfo *)p_acceleration_structure.id;
+
+	VkAccelerationStructureBuildGeometryInfoKHR *build_info = &accel_info->build_info;
+	VkDeviceAddress scratch_address = buffer_get_device_address(p_scratch_buffer);
+	build_info->scratchData.deviceAddress = _align_up_address(scratch_address, accel_info->scratch_alignment);
+
 	const VkAccelerationStructureBuildRangeInfoKHR *range_info_ptr = &accel_info->range_info;
-	vkCmdBuildAccelerationStructuresKHR((VkCommandBuffer)p_cmd_buffer.id, 1, &accel_info->build_info, &range_info_ptr);
+
+	vkCmdBuildAccelerationStructuresKHR((VkCommandBuffer)p_cmd_buffer.id, 1, build_info, &range_info_ptr);
 #endif
 }
 

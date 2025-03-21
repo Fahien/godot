@@ -3793,7 +3793,7 @@ void RenderingDeviceDriverMetal::raytracing_pipeline_free(RDD::RaytracingPipelin
 
 // ----- COMMANDS -----
 
-void RenderingDeviceDriverMetal::command_build_acceleration_structure(CommandBufferID p_cmd_buffer, AccelerationStructureID p_acceleration_structure) {
+void RenderingDeviceDriverMetal::command_build_acceleration_structure(CommandBufferID p_cmd_buffer, AccelerationStructureID p_acceleration_structure, BufferID p_scratch_buffer) {
 	// TODO
 	ERR_FAIL_MSG("Unimplemented!");
 }
