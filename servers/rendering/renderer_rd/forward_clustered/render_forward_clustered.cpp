@@ -784,8 +784,8 @@ void RenderForwardClustered::_update_transform_data_buffer(RenderListType p_rend
 				RD::get_singleton()->free(scene_state.transform_buffer[p_render_list]);
 			}
 			uint32_t new_size = nearest_power_of_2_templated(MAX(uint64_t(INSTANCE_DATA_BUFFER_MIN_SIZE), scene_state.transform_data[p_render_list].size()));
-			BitField<RD::StorageBufferUsage> usage = (RD::STORAGE_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY | RD::STORAGE_BUFFER_USAGE_DEVICE_ADDRESS);
-			scene_state.transform_buffer[p_render_list] = RD::get_singleton()->storage_buffer_create(new_size * sizeof(SceneState::TransformData), {}, usage);
+			BitField<RD::BufferCreationBits> creation_bits = (RD::BUFFER_CREATION_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT | RD::BUFFER_CREATION_DEVICE_ADDRESS_BIT);
+			scene_state.transform_buffer[p_render_list] = RD::get_singleton()->storage_buffer_create(new_size * sizeof(SceneState::TransformData), {}, 0, creation_bits);
 			scene_state.transform_buffer_size[p_render_list] = new_size;
 		}
 		RD::get_singleton()->buffer_update(scene_state.transform_buffer[p_render_list], 0, sizeof(SceneState::TransformData) * scene_state.transform_data[p_render_list].size(), scene_state.transform_data[p_render_list].ptr());

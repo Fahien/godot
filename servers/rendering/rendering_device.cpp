@@ -320,7 +320,7 @@ RID RenderingDevice::tlas_instances_buffer_create(uint32_t p_instance_count, Bit
 	InstancesBuffer instances_buffer;
 	instances_buffer.instance_count = p_instance_count;
 	instances_buffer.buffer.size = instances_buffer_size_bytes;
-	instances_buffer.buffer.usage = _creation_to_usage_bits(p_creation_bits) | RDD::BUFFER_USAGE_TRANSFER_FROM_BIT | RDD::BUFFER_USAGE_TRANSFER_TO_BIT | RDD::BUFFER_USAGE_DEVICE_ADDRESS_BIT | RDD::BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT;
+	instances_buffer.buffer.usage = RDD::BUFFER_USAGE_STORAGE_BIT | RDD::BUFFER_USAGE_TRANSFER_FROM_BIT | RDD::BUFFER_USAGE_DEVICE_ADDRESS_BIT | RDD::BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT;
 	instances_buffer.buffer.driver_id = driver->buffer_create(instances_buffer.buffer.size, instances_buffer.buffer.usage, RDD::MEMORY_ALLOCATION_TYPE_CPU);
 	ERR_FAIL_COND_V_MSG(!instances_buffer.buffer.driver_id, RID(), "Failed to create instances buffer.");
 
