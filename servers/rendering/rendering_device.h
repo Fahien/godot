@@ -1311,7 +1311,7 @@ public:
 		ACCELERATION_STRUCTURE_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION = (1 << 1),
 	};
 
-	RID blas_create(RID p_vertex_array, RID p_index_array, BitField<AccelerationStructureGeometryBits> p_geometry_bits = 0);
+	RID blas_create(RID p_vertex_array, RID p_index_array, BitField<AccelerationStructureGeometryBits> p_geometry_bits = 0, uint32_t p_position_attribute_location = 0);
 	RID tlas_instances_buffer_create(uint32_t p_instance_count, BitField<BufferCreationBits> p_creation_bits = 0);
 	void tlas_instances_buffer_fill(RID p_buffer, const Vector<RID> &p_blases, VectorView<Transform3D> p_transforms);
 	RID tlas_create(RID p_instances_buffer);

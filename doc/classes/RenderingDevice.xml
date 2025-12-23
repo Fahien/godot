@@ -34,9 +34,11 @@
 			<param index="0" name="vertex_array" type="RID" />
 			<param index="1" name="index_array" type="RID" />
 			<param index="2" name="geometry_bits" type="int" enum="RenderingDevice.AccelerationStructureGeometryBits" is_bitfield="true" default="0" />
+			<param index="3" name="position_attribute_location" type="int" default="0" />
 			<description>
 				Creates a new Bottom Level Acceleration Structure. It can be accessed with the RID that is returned.
 				Once finished with your RID, you will want to free the RID using the RenderingDevice's [method free_rid] method.
+				[param position_attribute_location] selects which vertex attribute location supplies the position data (default is 0).
 			</description>
 		</method>
 		<method name="buffer_clear">
@@ -758,7 +760,7 @@
 				[codeblocks]
 				[gdscript]
 				var rd = RenderingDevice.new()
-				assert(rd.has_feature(RenderingDevice.SUPPORTS_RAYTRACING))
+				assert(rd.has_feature(RenderingDevice.SUPPORTS_RAYTRACING_PIPELINE))
 
 				# Create a BLAS for a mesh.
 				blas = rd.blas_create(vertex_array, index_array, RenderingDevice.ACCELERATION_STRUCTURE_GEOMETRY_OPAQUE)
@@ -835,6 +837,7 @@
 			<description>
 				Creates a new raytracing pipeline. It can be accessed with the RID that is returned.
 				Once finished with your RID, you will want to free the RID using the RenderingDevice's [method free_rid] method.
+				[b]Note:[\b]: Recursive raytracing is not permitted.
 			</description>
 		</method>
 		<method name="raytracing_pipeline_is_valid">
@@ -2290,7 +2293,7 @@
 			[gdscript]
 			rd = RenderingServer.get_rendering_device()
 
-			if rd.has_feature(RenderingDevice.SUPPORTS_RAYTRACING):
+			if rd.has_feature(RenderingDevice.SUPPORTS_RAYTRACING_PIPELINE):
 			    storage_buffer = rd.storage_buffer_create(bytes.size(), bytes, RenderingDevice.BUFFER_CREATION_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT)
 			[/gdscript]
 			[/codeblocks]
@@ -2727,8 +2730,11 @@
 		<constant name="SUPPORTS_IMAGE_ATOMIC_32_BIT" value="7" enum="Features">
 			Support for 32-bit image atomic operations.
 		</constant>
-		<constant name="SUPPORTS_RAYTRACING" value="11" enum="Features">
-			Support for raytracing extension.
+		<constant name="SUPPORTS_RAYTRACING_QUERY" value="11" enum="Features">
+			Support for raytracing query extension.
+		</constant>
+		<constant name="SUPPORTS_RAYTRACING_PIPELINE" value="12" enum="Features">
+			Support for raytracing pipeline extension.
 		</constant>
 		<constant name="LIMIT_MAX_BOUND_UNIFORM_SETS" value="0" enum="Limit">
 			Maximum number of uniform sets that can be bound at a given time.

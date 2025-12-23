@@ -48,6 +48,8 @@
 
 #define ARRAY_SIZE(a) std_size(a)
 
+#define VULKAN_RAYTRACING_ENABLED() !(defined(MACOS_ENABLED) || defined(IOS_ENABLED))
+
 #define PRINT_NATIVE_COMMANDS 0
 
 // Enable the use of re-spirv for optimizing shaders after applying specialization constants.
@@ -6039,24 +6041,46 @@ RDD::PipelineID RenderingDeviceDriverVulkan::render_pipeline_create(
 static_assert(ENUM_MEMBERS_EQUAL(RDD::ACCELERATION_STRUCTURE_GEOMETRY_OPAQUE, VK_GEOMETRY_OPAQUE_BIT_KHR));
 static_assert(ENUM_MEMBERS_EQUAL(RDD::ACCELERATION_STRUCTURE_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION, VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_KHR));
 
-RDD::AccelerationStructureID RenderingDeviceDriverVulkan::blas_create(BufferID p_vertex_buffer, uint64_t p_vertex_offset, VertexFormatID p_vertex_format, uint32_t p_vertex_count, BufferID p_index_buffer, IndexBufferFormat p_index_format, uint64_t p_index_offset_bytes, uint32_t p_index_count, BitField<AccelerationStructureGeometryBits> p_geometry_bits) {
-#if !(defined(MACOS_ENABLED) || defined(IOS_ENABLED))
-	// Vertex positions is first buffer.
+RDD::AccelerationStructureID RenderingDeviceDriverVulkan::blas_create(BufferID p_vertex_buffer, uint64_t p_vertex_offset, VertexFormatID p_vertex_format, uint32_t p_vertex_count, uint32_t p_position_attribute_location, BufferID p_index_buffer, IndexBufferFormat p_index_format, uint64_t p_index_offset_bytes, uint32_t p_index_count, BitField<AccelerationStructureGeometryBits> p_geometry_bits) {
+#if VULKAN_RAYTRACING_ENABLED()
 	const VertexFormatInfo *vf_info = (const VertexFormatInfo *)p_vertex_format.id;
-	VkDeviceSize buffer_offset = vf_info->vk_attributes[0].offset;
+
+	const VkVertexInputAttributeDescription *position_attribute = nullptr;
+	for (const VkVertexInputAttributeDescription &attribute : vf_info->vk_attributes) {
+		if (attribute.location == p_position_attribute_location) {
+			position_attribute = &attribute;
+			break;
+		}
+	}
+	ERR_FAIL_NULL_V_MSG(position_attribute, AccelerationStructureID(), "BLAS position attribute location is missing from the vertex format.");
+
+	uint32_t position_binding_index = position_attribute->binding;
+	if (position_binding_index == UINT32_MAX) {
+		position_binding_index = p_position_attribute_location;
+	}
+
+	const VkVertexInputBindingDescription *position_binding = nullptr;
+	for (const VkVertexInputBindingDescription &binding : vf_info->vk_bindings) {
+		if (binding.binding == position_binding_index) {
+			position_binding = &binding;
+			break;
+		}
+	}
+	ERR_FAIL_NULL_V_MSG(position_binding, AccelerationStructureID(), "BLAS position attribute binding is missing from the vertex format.");
+
+	VkDeviceSize buffer_offset = position_attribute->offset;
 
 	VkDeviceAddress vertex_address = buffer_get_device_address(p_vertex_buffer) + buffer_offset;
 	VkDeviceAddress index_address = buffer_get_device_address(p_index_buffer) + p_index_offset_bytes;
 
-	VkDeviceSize vertex_stride = vf_info->vk_bindings[0].stride;
-	VkFormat vertex_format = vf_info->vk_attributes[0].format;
+	VkDeviceSize vertex_stride = position_binding->stride;
+	VkFormat vertex_format = position_attribute->format;
 	uint32_t max_vertex = p_vertex_count ? p_vertex_count - 1 : 0;
 
 	AccelerationStructureInfo *accel_info = VersatileResource::allocate<AccelerationStructureInfo>(resources_allocator);
 
 	accel_info->geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
 	accel_info->geometry.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-	// Keep in mind that this avoids invoking the any hit shader.
 	accel_info->geometry.flags = p_geometry_bits;
 
 	accel_info->geometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
@@ -6101,7 +6125,7 @@ RDD::AccelerationStructureID RenderingDeviceDriverVulkan::blas_create(BufferID p
 #endif
 }
 
-#if !(defined(MACOS_ENABLED) || defined(IOS_ENABLED))
+#if VULKAN_RAYTRACING_ENABLED()
 static _FORCE_INLINE_ void _store_transform_transposed_3x4(const Transform3D &p_mtx, VkTransformMatrixKHR &r_mtx) {
 	r_mtx.matrix[0][0] = p_mtx.basis.rows[0][0];
 	r_mtx.matrix[0][1] = p_mtx.basis.rows[0][1];
@@ -6119,7 +6143,7 @@ static _FORCE_INLINE_ void _store_transform_transposed_3x4(const Transform3D &p_
 #endif
 
 uint32_t RenderingDeviceDriverVulkan::tlas_instances_buffer_get_size_bytes(uint32_t p_instance_count) {
-#if !(defined(MACOS_ENABLED) || defined(IOS_ENABLED))
+#if VULKAN_RAYTRACING_ENABLED()
 	return p_instance_count * sizeof(VkAccelerationStructureInstanceKHR);
 #else
 	return 0;
@@ -6127,7 +6151,7 @@ uint32_t RenderingDeviceDriverVulkan::tlas_instances_buffer_get_size_bytes(uint3
 }
 
 void RenderingDeviceDriverVulkan::tlas_instances_buffer_fill(BufferID p_instances_buffer, VectorView<AccelerationStructureID> p_blases, VectorView<Transform3D> p_transforms) {
-#if !(defined(MACOS_ENABLED) || defined(IOS_ENABLED))
+#if VULKAN_RAYTRACING_ENABLED()
 	uint32_t blases_count = p_blases.size();
 	ERR_FAIL_COND_MSG(blases_count != p_transforms.size(), "Blases and transforms vectors must have the same size.");
 	ERR_FAIL_COND(blases_count == 0);
@@ -6157,7 +6181,7 @@ void RenderingDeviceDriverVulkan::tlas_instances_buffer_fill(BufferID p_instance
 }
 
 RDD::AccelerationStructureID RenderingDeviceDriverVulkan::tlas_create(BufferID p_instances_buffer) {
-#if !(defined(MACOS_ENABLED) || defined(IOS_ENABLED))
+#if VULKAN_RAYTRACING_ENABLED()
 	ERR_FAIL_COND_V(p_instances_buffer == BufferID(), AccelerationStructureID());
 
 	AccelerationStructureInfo *accel_info = VersatileResource::allocate<AccelerationStructureInfo>(resources_allocator);
@@ -6187,14 +6211,14 @@ RDD::AccelerationStructureID RenderingDeviceDriverVulkan::tlas_create(BufferID p
 #endif
 }
 
-#if !(defined(MACOS_ENABLED) || defined(IOS_ENABLED))
+#if VULKAN_RAYTRACING_ENABLED()
 static VkDeviceAddress _align_up_address(VkDeviceAddress address, VkDeviceAddress alignment) {
 	return (address + (alignment - 1)) & ~(alignment - 1);
 }
 #endif
 
 void RenderingDeviceDriverVulkan::_acceleration_structure_create(VkAccelerationStructureTypeKHR p_type, VkAccelerationStructureBuildSizesInfoKHR p_size_info, AccelerationStructureInfo *r_accel_info) {
-#if !(defined(MACOS_ENABLED) || defined(IOS_ENABLED))
+#if VULKAN_RAYTRACING_ENABLED()
 	RDD::BufferID buffer = buffer_create(p_size_info.accelerationStructureSize, RDD::BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT | RDD::BUFFER_USAGE_STORAGE_BIT | RDD::BUFFER_USAGE_DEVICE_ADDRESS_BIT, RDD::MEMORY_ALLOCATION_TYPE_GPU, UINT64_MAX);
 	r_accel_info->buffer = buffer;
 
@@ -6214,7 +6238,7 @@ void RenderingDeviceDriverVulkan::_acceleration_structure_create(VkAccelerationS
 }
 
 void RenderingDeviceDriverVulkan::acceleration_structure_free(AccelerationStructureID p_acceleration_structure) {
-#if !(defined(MACOS_ENABLED) || defined(IOS_ENABLED))
+#if VULKAN_RAYTRACING_ENABLED()
 	AccelerationStructureInfo *accel_info = (AccelerationStructureInfo *)p_acceleration_structure.id;
 	ERR_FAIL_NULL_MSG(accel_info, "Acceleration structure input parameter is not valid.");
 	if (accel_info->instances_buffer) {
@@ -6239,7 +6263,7 @@ uint32_t RenderingDeviceDriverVulkan::acceleration_structure_get_scratch_size_by
 // ----- COMMANDS -----
 
 void RenderingDeviceDriverVulkan::command_build_acceleration_structure(CommandBufferID p_cmd_buffer, AccelerationStructureID p_acceleration_structure, BufferID p_scratch_buffer) {
-#if !(defined(MACOS_ENABLED) || defined(IOS_ENABLED))
+#if VULKAN_RAYTRACING_ENABLED()
 	const CommandBufferInfo *command_buffer = (const CommandBufferInfo *)p_cmd_buffer.id;
 	AccelerationStructureInfo *accel_info = (AccelerationStructureInfo *)p_acceleration_structure.id;
 
@@ -6268,7 +6292,7 @@ void RenderingDeviceDriverVulkan::command_bind_raytracing_uniform_set(CommandBuf
 }
 
 void RenderingDeviceDriverVulkan::command_trace_rays(CommandBufferID p_cmd_buffer, uint32_t p_width, uint32_t p_height) {
-#if !(defined(MACOS_ENABLED) || defined(IOS_ENABLED))
+#if VULKAN_RAYTRACING_ENABLED()
 	const CommandBufferInfo *command_buffer = (const CommandBufferInfo *)p_cmd_buffer.id;
 	ERR_FAIL_COND_MSG(bound_raytracing_pipeline_id == RaytracingPipelineID(), "A raytracing pipeline must have been bound with `command_bind_raytracing_pipeline()`.");
 	const RaytracingPipelineInfo *rpi = (const RaytracingPipelineInfo *)bound_raytracing_pipeline_id.id;
@@ -6279,7 +6303,7 @@ void RenderingDeviceDriverVulkan::command_trace_rays(CommandBufferID p_cmd_buffe
 // --- PIPELINE ---
 
 RDD::RaytracingPipelineID RenderingDeviceDriverVulkan::raytracing_pipeline_create(ShaderID p_shader, VectorView<PipelineSpecializationConstant> p_specialization_constants) {
-#if !(defined(MACOS_ENABLED) || defined(IOS_ENABLED))
+#if VULKAN_RAYTRACING_ENABLED()
 	const ShaderInfo *shader_info = (const ShaderInfo *)p_shader.id;
 
 	VkRayTracingPipelineCreateInfoKHR pipeline_create_info = {};
@@ -6342,7 +6366,7 @@ RDD::RaytracingPipelineID RenderingDeviceDriverVulkan::raytracing_pipeline_creat
 }
 
 VkResult RenderingDeviceDriverVulkan::_raytracing_pipeline_stb_create(RaytracingPipelineID p_pipeline, ShaderID p_shader) {
-#if !(defined(MACOS_ENABLED) || defined(IOS_ENABLED))
+#if VULKAN_RAYTRACING_ENABLED()
 	RaytracingPipelineInfo *rpi = (RaytracingPipelineInfo *)p_pipeline.id;
 	const ShaderInfo *shader_info = (const ShaderInfo *)p_shader.id;
 
@@ -7160,7 +7184,9 @@ bool RenderingDeviceDriverVulkan::has_feature(Features p_feature) {
 			return framebuffer_depth_resolve;
 		case SUPPORTS_POINT_SIZE:
 			return true;
-		case SUPPORTS_RAYTRACING:
+		case SUPPORTS_RAYTRACING_QUERY:
+			return acceleration_structure_capabilities.acceleration_structure_support && raytracing_capabilities.raytracing_query_support;
+		case SUPPORTS_RAYTRACING_PIPELINE:
 			return acceleration_structure_capabilities.acceleration_structure_support && raytracing_capabilities.raytracing_pipeline_support;
 		default:
 			return false;

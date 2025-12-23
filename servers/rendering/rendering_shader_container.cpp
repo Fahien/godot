@@ -242,11 +242,37 @@ Error RenderingShaderContainer::reflect_spirv(const String &p_shader_name, Span<
 	LocalVector<ReflectShaderStage> &r_refl = r_shader.shader_stages;
 	r_refl.resize(spirv_size);
 
+	bool pipeline_type_detected = false;
 	for (uint32_t i = 0; i < spirv_size; i++) {
 		RDC::ShaderStage stage = p_spirv[i].shader_stage;
 		RDC::ShaderStage stage_flag = (RDC::ShaderStage)(1 << stage);
 		r_refl[i].shader_stage = stage;
 		r_refl[i]._spirv_data = p_spirv[i].spirv;
+
+		if (!pipeline_type_detected) {
+			switch (stage) {
+				case RDC::SHADER_STAGE_VERTEX:
+				case RDC::SHADER_STAGE_FRAGMENT:
+				case RDC::SHADER_STAGE_TESSELATION_CONTROL:
+				case RDC::SHADER_STAGE_TESSELATION_EVALUATION:
+					r_shader.pipeline_type = RDC::PIPELINE_TYPE_RASTERIZATION;
+					break;
+				case RDC::SHADER_STAGE_COMPUTE:
+					r_shader.pipeline_type = RDC::PIPELINE_TYPE_COMPUTE;
+					break;
+				case RDC::SHADER_STAGE_RAYGEN:
+				case RDC::SHADER_STAGE_ANY_HIT:
+				case RDC::SHADER_STAGE_CLOSEST_HIT:
+				case RDC::SHADER_STAGE_MISS:
+				case RDC::SHADER_STAGE_INTERSECTION:
+					r_shader.pipeline_type = RDC::PIPELINE_TYPE_RAYTRACING;
+					break;
+				default:
+					DEV_ASSERT(false && "Unknown shader stage.");
+			}
+
+			pipeline_type_detected = true;
+		}
 
 		const Vector<uint64_t> &dynamic_buffers = p_spirv[i].dynamic_buffers;
 
