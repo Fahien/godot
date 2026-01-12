@@ -804,7 +804,7 @@ private:
 	HashMap<VertexFormatID, VertexDescriptionCache> vertex_formats;
 
 	struct VertexArray {
-		RID buffer;
+		Vector<RID> buffer_rids;
 		VertexFormatID description;
 		int vertex_count = 0;
 		uint32_t max_instances_allowed = 0;
@@ -829,10 +829,11 @@ private:
 	RID_Owner<IndexBuffer, true> index_buffer_owner;
 
 	struct IndexArray {
+		RID buffer;
 		uint32_t max_index = 0; // Remember the maximum index here too, for validation.
 		RDD::BufferID driver_id; // Not owned, inherited from index buffer.
 		RDG::ResourceTracker *draw_tracker = nullptr; // Not owned, inherited from index buffer.
-		uint32_t offset = 0;
+		uint32_t offset = 0; // Offset in number of indices.
 		uint32_t indices = 0;
 		IndexBufferFormat format = INDEX_BUFFER_FORMAT_UINT16;
 		bool supports_restart_indices = false;
@@ -862,11 +863,15 @@ public:
 	// This ID is warranted to be unique for the same formats, does not need to be freed
 	VertexFormatID vertex_format_create(const Vector<VertexAttribute> &p_vertex_descriptions);
 	RID vertex_array_create(uint32_t p_vertex_count, VertexFormatID p_vertex_format, const Vector<RID> &p_src_buffers, const Vector<uint64_t> &p_offsets = Vector<uint64_t>());
+	RID vertex_array_get_buffer(RID p_vertex_array, uint32_t p_buffer_index);
+	uint32_t vertex_array_get_buffer_offset(RID p_vertex_array, uint32_t p_buffer_index);
 
 	RID index_buffer_create(uint32_t p_index_count, IndexBufferFormat p_format, Span<uint8_t> p_data = {}, bool p_use_restart_indices = false, BitField<BufferCreationBits> p_creation_bits = 0);
 	RID _index_buffer_create(uint32_t p_index_count, IndexBufferFormat p_format, const Vector<uint8_t> &p_data, bool p_use_restart_indices = false, BitField<BufferCreationBits> p_creation_bits = 0) {
 		return index_buffer_create(p_index_count, p_format, p_data, p_use_restart_indices, p_creation_bits);
 	}
+	RID index_array_get_buffer(RID p_index_array);
+	uint32_t index_array_get_buffer_offset(RID p_index_array);
 
 	RID index_array_create(RID p_index_buffer, uint32_t p_index_offset, uint32_t p_index_count);
 
