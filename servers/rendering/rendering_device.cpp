@@ -7008,6 +7008,9 @@ void RenderingDevice::_free_internal(RID p_id) {
 		compute_pipeline_owner.free(p_id);
 	} else if (acceleration_structure_owner.owns(p_id)) {
 		AccelerationStructure *acceleration_structure = acceleration_structure_owner.get_or_null(p_id);
+		if (acceleration_structure->scratch_buffer.is_valid()) {
+			_free_internal(acceleration_structure->scratch_buffer);
+		}
 		frames[frame].acceleration_structures_to_dispose_of.push_back(*acceleration_structure);
 		acceleration_structure_owner.free(p_id);
 	} else if (raytracing_pipeline_owner.owns(p_id)) {
@@ -7204,9 +7207,6 @@ void RenderingDevice::_free_pending_resources(int p_frame) {
 	while (frames[p_frame].acceleration_structures_to_dispose_of.front()) {
 		AccelerationStructure &acceleration_structure = frames[p_frame].acceleration_structures_to_dispose_of.front()->get();
 
-		if (acceleration_structure.scratch_buffer != RID()) {
-			free_rid(acceleration_structure.scratch_buffer);
-		}
 		driver->acceleration_structure_free(acceleration_structure.driver_id);
 
 		frames[p_frame].acceleration_structures_to_dispose_of.pop_front();
